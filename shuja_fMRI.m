@@ -1,5 +1,9 @@
-fMRI = load('/Volumes/Diedrichsen_data$/data/Chord_exp/ChordPatternDist/analysis/reg_data_1.mat');
-info = load('/Volumes/Diedrichsen_data$/data/Chord_exp/ChordPatternDist/analysis/SPM_info_1.mat');
+% fMRI = load('/Volumes/Diedrichsen_data$/data/Chord_exp/ChordPatternDist/analysis/reg_data_1.mat');
+% info = load('/Volumes/Diedrichsen_data$/data/Chord_exp/ChordPatternDist/analysis/SPM_info_1.mat');
+fMRI = load('/Users/ali/Desktop/Projects/EFC_patternfMRI/reg_data_1.mat');
+info = load('/Users/ali/Desktop/Projects/EFC_patternfMRI/SPM_info_1.mat');
+
+
 % assuming that info is same across participants:
 info = getrow(info,info.sn==1);
 
