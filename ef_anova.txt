@@ -1,0 +1,90 @@
+
+S1, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  43.532536     2.0    16.0  0.000000
+
+S1, extension
+         F Value  Num DF  Den DF    Pr > F
+force  17.967721     2.0    16.0  0.000081
+=====================
+
+M1, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  25.347444     2.0    16.0  0.000011
+
+M1, extension
+         F Value  Num DF  Den DF    Pr > F
+force  11.288014     2.0    16.0  0.000876
+=====================
+
+PMd, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  16.378690     2.0    16.0  0.000134
+
+PMd, extension
+        F Value  Num DF  Den DF    Pr > F
+force  6.054850     2.0    16.0  0.011018
+=====================
+
+PMv, flexion
+        F Value  Num DF  Den DF    Pr > F
+force  1.683599     2.0    16.0  0.216983
+
+PMv, extension
+        F Value  Num DF  Den DF    Pr > F
+force  0.589400     2.0    16.0  0.566262
+=====================
+
+SMA, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  11.562983     2.0    16.0  0.000782
+
+SMA, extension
+        F Value  Num DF  Den DF    Pr > F
+force  0.815683     2.0    16.0  0.459909
+=====================
+
+V12, flexion
+        F Value  Num DF  Den DF    Pr > F
+force  3.451320     2.0    16.0  0.056738
+
+V12, extension
+        F Value  Num DF  Den DF    Pr > F
+force  1.936399     2.0    16.0  0.176558
+=====================
+
+SPLa, flexion
+        F Value  Num DF  Den DF    Pr > F
+force  5.548720     2.0    16.0  0.014775
+
+SPLa, extension
+        F Value  Num DF  Den DF    Pr > F
+force  2.184955     2.0    16.0  0.144893
+=====================
+
+SPLp, flexion
+        F Value  Num DF  Den DF    Pr > F
+force  2.289479     2.0    16.0  0.133528
+
+SPLp, extension
+        F Value  Num DF  Den DF    Pr > F
+force  1.132611     2.0    16.0  0.346705
+=====================
+
+rM1, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  13.888985     2.0    16.0  0.000318
+
+rM1, extension
+        F Value  Num DF  Den DF    Pr > F
+force  6.974378     2.0    16.0  0.006636
+=====================
+
+cM1, flexion
+         F Value  Num DF  Den DF    Pr > F
+force  29.502781     2.0    16.0  0.000004
+
+cM1, extension
+         F Value  Num DF  Den DF    Pr > F
+force  12.270434     2.0    16.0  0.000589
+=====================
