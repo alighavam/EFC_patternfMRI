@@ -12,7 +12,8 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
             subtract_mean: Subtract the mean of voxels across conditions within a run.
 
         Returns:
-            vs, ve: 1D numpy array of shape (P-voxels) with within subject and noise variance
+            v_s:  1D array containing the subject variance.
+            v_se: 1D array containing subject + noise variance.
     '''
 
     # In case partition_vec was not contiguous, e.g.,: [1, 1, 2, 2, 1, 1, 2, 2] instead of [1,1,1,1,2,2,2,2].
@@ -26,6 +27,8 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
     subj = np.unique(subj_vec)
     partition = np.unique(partition_vec)
 
+    v_s = np.zeros(len(subj))
+    v_se = np.zeros(len(subj))
     # loop on subj:
     for sn in subj:
         Y = data[:, subj_vec == sn]
@@ -42,9 +45,17 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
 
             # subtract the partition means from the original reshaped Y and rehsape back to original:
             Y = (Y_reshaped - partition_means).reshape(N, P)
-
+        
         cov_Y = Y @ Y.T / Y.shape[1]
 
-    return cov_Y
-        
+        # within partition variance:
+        v_se[sn-1] = np.sum(np.diag(cov_Y))/(len(cond)*len(partition))
 
+        # across partition variance:
+        # get the covariance of the same condition across partitions:
+        mask = np.kron(np.ones((len(partition), len(partition))), np.eye(len(cond)))
+        mask = mask - np.eye(mask.shape[0])
+        cov_Y_across = cov_Y * mask
+        v_s[sn-1] = np.sum(cov_Y_across)/(len(cond) * (len(partition)**2 - len(partition)))
+
+    return v_s, v_se
