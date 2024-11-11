@@ -4,3 +4,4 @@
 /analysis
 *.asv
 /figures
+/utils/__pycache__
