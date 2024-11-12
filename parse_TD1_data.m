@@ -51,39 +51,21 @@ glm_betas.xyz = xyz;
 glm_betas.sn = sn;
 glm_betas.region = region;
 
-% get and add region names to glm_beta:
-% glm_betas.region_name = strings(size(glm_betas.region));
-% glm_betas.hemi = zeros(size(glm_betas.region));
-
-% N = length(unique(sn));
-% for i = 1:N
-%     % load subj region info:
-%     tmp = load(fullfile(regDir,sprintf('s%.2d_regions_8.mat',i))).R;
-%     for j = 1:length(tmp)
-%         name = tmp{j}.name;
-%         roi = tmp{j}.roi;
-%         hemi = tmp{j}.hemi;
-%         glm_betas.region_name(glm_betas.region==roi,:) = string(name);
-%         glm_betas.hemi(glm_betas.region==roi) = hemi;
-%     end
-% end
-% glm_betas = rmfield(glm_betas,'region_name');
-
 % ========== get regressor info:
 glm_info = []; % flat dataframe containing info of betas
-for i = 1:N
-    % load subj region info:
-    sn_info = load(fullfile(glmDir,sprintf('s%.2d',i),'SPM_info.mat'));
-    sn_info = rmfield(sn_info,'regtype');
-    sn_info = rmfield(sn_info,'regname');
-    glm_info = addstruct(glm_info,sn_info,'row',1);
-end
-sn = glm_info.SN;
-glm_info.sn = sn;
-glm_info = rmfield(glm_info,'SN');
+run = [1:8]';
+digit = [1:5,1:5]';
+hand = [1,1,1,1,1,2,2,2,2,2]';
 
-save(fullfile('analysis','ef_glm_betas.mat'),'glm_betas')
-dsave(fullfile('analysis','ef_glm_info.tsv'),glm_info);
+run_vec = repelem(run,length(digit));
+digit_vec = repmat(digit,length(run),1);
+hand_vec = repmat(hand,length(run),1);
 
+glm_info.run = run_vec;
+glm_info.digit = digit_vec;
+glm_info.hand = hand_vec;
+
+save(fullfile('analysis','hd1_glm_betas.mat'),'-struct','glm_betas')
+dsave(fullfile('analysis','hd1_glm_info.tsv'),glm_info);
 
 
