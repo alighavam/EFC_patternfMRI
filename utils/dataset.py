@@ -46,16 +46,33 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
             # subtract the partition means from the original reshaped Y and rehsape back to original:
             Y = (Y_reshaped - partition_means).reshape(N, P)
         
-        cov_Y = Y @ Y.T / Y.shape[1]
+            cov_Y = Y @ Y.T / Y.shape[1]
 
-        # within partition variance:
-        v_se[sn-1] = np.sum(np.diag(cov_Y))/(len(cond)*len(partition))
+            # avg of the main diagonal:
+            avg_main_diag = np.sum(np.diag(cov_Y))/(len(cond)*len(partition))
+            
+            # avg of the main off-diagonal:
+            mask = np.kron(np.eye(len(partition)), np.ones((len(cond),len(cond))))
+            mask = mask - np.eye(mask.shape[0])
+            avg_main_off_diag = np.sum(cov_Y * mask)/(np.sum(mask))
+            
+            # within partition variance:
+            v_se[sn-1] = avg_main_diag
 
-        # across partition variance:
-        # get the covariance of the same condition across partitions:
-        mask = np.kron(np.ones((len(partition), len(partition))), np.eye(len(cond)))
-        mask = mask - np.eye(mask.shape[0])
-        cov_Y_across = cov_Y * mask
-        v_s[sn-1] = np.sum(cov_Y_across)/(len(cond) * (len(partition)**2 - len(partition)))
+            # avg across session diagonals:
+            mask = np.kron(np.ones((len(partition), len(partition))), np.eye(len(cond)))
+            mask = mask - np.eye(mask.shape[0])
+            avg_across_diag = np.sum(cov_Y * mask)/(np.sum(mask))
+
+            # avg across session off-diagonals:
+            mask = np.kron(1-np.eye(len(partition)), np.ones((len(cond), len(cond))))
+            mask = mask - np.kron(np.ones((len(partition), len(partition))), np.eye(len(cond))) + np.eye(mask.shape[0])
+            avg_across_off_diag = np.sum(cov_Y * mask)/(np.sum(mask))
+
+            # across partition variance:            
+            v_s[sn-1] = avg_across_diag
+
+        else:
+            pass
 
     return v_s, v_se
