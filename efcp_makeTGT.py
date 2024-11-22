@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # all runs:
     runs = set1_runs + set2_runs
-
+    
     # params:
     planTime = 0  # time for planning, if 0, go-cue is presented immediately
     execMaxTime = 10000  # maximum allowed time for execution
