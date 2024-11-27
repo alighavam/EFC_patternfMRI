@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import emg_handler
+from utils import emg_handler
 
 def movload(fname):
     '''
