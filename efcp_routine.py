@@ -21,37 +21,38 @@ def trial_routine(row):
 
     return C
 
-def subject_routine(subject, fs=500):
+def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=30, debug=0):
     """
     This function is used to preprocess the data of a subject
     
     params:
         subject: int, the subject number
-        fs: int, the sampling frequency of the force data
+        fs_force: the sampling frequency of the force data
+        fs_emg: the sampling frequency of the emg data
     """
     # empty dataframe to store the data:
-    df = pd.DataFrame()
+    D = pd.DataFrame()
     df_mov = pd.DataFrame(columns=['sn', 'BN', 'TN', 'trial_correct', 'state', 'time','f1','f2','f3','f4','f5'])
 
     # Load the .dat file:
     dat_file_name = os.path.join(DATA_PATH, 'behavioural', f'subj{subject}', f'efcp_{subject}.dat') 
     dat = pd.read_csv(dat_file_name, sep='\t')
-    
+
+    #  ============== PROCESSING THE RAW BEHAVIOURAL DATA ==============
     oldblock = -1
     # loop on trials:
     for i in range(dat.shape[0]):
         if dat['BN'][i] != oldblock:
-            print(f'Processing block {dat['BN'][i]}')
+            print(f'Processing block {dat["BN"][i]}')
             # load the .mov file:
             ext = int(dat['BN'][i])
-            mov = ds.movload(os.path.join(DATA_PATH, 'behavioural', f'subj{subject}', f'efcp_{subject}.dat'))
+            mov = ds.movload(os.path.join(DATA_PATH, 'behavioural', f'subj{subject}', f'efcp_{subject}_{ext:02d}.mov'))
             oldblock = dat['BN'][i]
-        print(f'Processing trial {dat["TN"][i]}')
         # trial routine:
         C = trial_routine(dat.iloc[[i]])
 
         # append the trial to the dataframe:
-        df = pd.concat([df, C], ignore_index=True)
+        D = pd.concat([D, C], ignore_index=True)
 
         # smooth the forces with Gaussian filter:
         tmp_mov = mov[dat['TN'][i]-1]
@@ -62,17 +63,93 @@ def subject_routine(subject, fs=500):
                             'f1': tmp_mov[:,13], 'f2': tmp_mov[:,14], 'f3': tmp_mov[:,15], 'f4': tmp_mov[:,16], 'f5': tmp_mov[:,17]})
         df_mov = pd.concat([df_mov, tmp], ignore_index=True)
 
-    # sort the dataframes by day:
-    df = df.sort_values(by='day', kind='mergesort')
-    df_mov = df_mov.sort_values(by='day', kind='mergesort')
+    #  ============== PROCESSING THE RAW EMG DATA ==============
+    # iterate through emg files and load:
+    uniqueBN = np.unique(D.BN)
+    for i, bn in enumerate(uniqueBN):
+        # getting the name of the file:
+        fname = os.path.join(DATA_PATH, 'emg', f'subj{subject}', f'emg_run{bn}.csv')
+
+        # load and clean up the file:
+        file = pd.read_csv(fname, header=None, delimiter=',', skiprows=5) 
+        file.drop(index=1, inplace=True)
+        file.reset_index(drop=True, inplace=True)
+        # header columns names:
+        header = file.iloc[0].values
+        # the emg signals:
+        data = file[1:]
+        data = data.apply(pd.to_numeric, errors='coerce').astype(float)
+
+        # wanted channel names:
+        channel_names = ['Analog 1', 'ext_D1', 'ext_D2', 'ext_D3', 'ext_D4', 'ext_D5', 'flx_D1', 'flx_D2', 'flx_D3', 'flx_D4', 'flx_D5']
+        col_names = ['sn','BN','TN','state','e1', 'e2', 'e3', 'e4', 'e5', 'f1', 'f2', 'f3', 'f4', 'f5']
+        df_emg = pd.DataFrame(columns=col_names)
+
+        # Extract the wanted signals from the csv file
+        raw_emg = np.zeros((data.shape[0],2*len(channel_names)), dtype=np.float32)
+        col = 0
+        for name in channel_names:
+            for i, col_name in enumerate(header):
+                if name in col_name:
+                    raw_emg[:,col] = data.iloc[0:, i].to_numpy()
+                    col = col+1
+
+        # find trial indices based on triggers:
+        t_trig = raw_emg[:,0]
+        trig = raw_emg[:,1]
+        t_signal = raw_emg[:,2]
+        threshold = 0.05
+        trial_start_idx, trial_end_idx, riseTime, fallTime  = emg_handler.find_trigger_rise_edge(t_trig, trig, t_signal, 
+                                                                                                threshold=threshold, debug=debug)
+        # get the full emg signal:
+        sig = raw_emg[:,3::2]
+
+        # bandpass filter the whole signal:
+        sos = signal.butter(2, bpf, btype='bandpass', fs=fs_emg, output='sos')  # using 'sos' to avoid numerical errors
+        sig_filtered = signal.sosfiltfilt(sos, sig, axis=0)
+
+        sos_lpf = signal.butter(2, lpf, btype='lowpass', fs=fs_emg, output='sos')
+        # get the trials:
+        for i, idx in enumerate(trial_start_idx):
+            trial_sig = sig_filtered[idx:trial_end_idx[i]]
+            trial_time = t_signal[idx:trial_end_idx[i]] - t_signal[idx]
+
+            # de-mean rectify the signal:
+            trial_sig = np.abs(trial_sig - np.mean(trial_sig, axis=0))
+            
+            # low-pass filter the demeaned signal:
+            trial_sig_filtered = signal.sosfiltfilt(sos_lpf, trial_sig, axis=0)
+
+            col_names = ['sn','BN','TN','trial_correct','state','time','e1', 'e2', 'e3', 'e4', 'e5', 'f1', 'f2', 'f3', 'f4', 'f5']
+            tmp_sn = np.full_like(trial_sig_filtered[:,0], subject)
+            tmp_BN = np.full_like(trial_sig_filtered[:,0], bn)
+            tmp_TN = np.full_like(trial_sig_filtered[:,0], i+1)
+            tmp_trial_correct = np.full_like(trial_sig_filtered[:,0], D[(D['BN'] == bn) & (D['TN'] == i+1)]['trial_correct'].values)
+            
+            # match mov with emg:
+            mov_time = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i+1)]['time'].values
+            mov_states = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i+1)]['state'].values
+            unique_states = np.unique(mov_states)
+            tmp_state = np.full_like(trial_sig_filtered[:,0], 0)
+            for state in unique_states:
+                t1 = mov_time[mov_states == state][0]
+                t2 = mov_time[mov_states == state][-1]
+                idx = np.where((trial_time >= t1) & (trial_time <= t2))[0]
+                tmp_state[idx] = state
+            
+            # fill in the dataframe:
+            tmp = pd.DataFrame({'sn': tmp_sn, 'BN': tmp_BN, 'TN': tmp_TN, 'trial_correct': tmp_trial_correct, 
+                            'state': tmp_state, 'time': trial_time,
+                            'e1': trial_sig_filtered[:,0], 'e2': trial_sig_filtered[:,1], 'e3': trial_sig_filtered[:,2], 'e4': trial_sig_filtered[:,3], 'e5': trial_sig_filtered[:,4], 
+                            'f1': trial_sig_filtered[:,5], 'f2': trial_sig_filtered[:,6], 'f3': trial_sig_filtered[:,7], 'f4': trial_sig_filtered[:,8], 'f5': trial_sig_filtered[:,9]})
+            df_emg = pd.concat([df_emg, tmp], ignore_index=True)
 
     # save the data frames:
-    df.to_csv(os.path.join(ANALYSIS_PATH, f'efc2_{subject}.csv'), index=False)
-    
-    df_mov.reset_index(drop=True, inplace=True)
-    df_mov.to_pickle(os.path.join(ANALYSIS_PATH, f'efc2_{subject}_mov.pkl'))
-    
-    return df, df_mov
+    D.to_csv(os.path.join(ANALYSIS_PATH, f'efcp_{subject}.csv'), index=False)
+    df_mov.to_csv(os.path.join(ANALYSIS_PATH, f'efcp_{subject}_mov.csv'), index=False)
+    df_emg.to_csv(os.path.join(ANALYSIS_PATH, f'efcp_{subject}_emg.csv'), index=False)
+
+    return D, df_mov, df_emg
 
 def ppp(subjNum, smoothing_window=30, fs=500):
     datFileName = os.path.join(DATA_PATH, 'behavioural', f'subj{subjNum}', f'efcp_{subjNum}.dat')   # input .dat file

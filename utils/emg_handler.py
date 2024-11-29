@@ -82,8 +82,8 @@ def find_trigger_rise_edge(t_trig, trig, t_signal, threshold=0.1, debug=0):    #
     trig_riseTime = t_trig[riseIdx]
     trig_fallTime = t_trig[fallIdx]
 
-    trial_start_idx = np.zeros(len(trig_riseTime))
-    trial_end_idx = np.zeros(len(trig_fallTime))
+    trial_start_idx = np.zeros(len(trig_riseTime), dtype=int)
+    trial_end_idx = np.zeros(len(trig_fallTime), dtype=int)
     riseTime = np.zeros(len(trig_riseTime))
     fallTime = np.zeros(len(trig_fallTime))
     for i in range(len(trig_riseTime)):
