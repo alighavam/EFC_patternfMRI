@@ -65,6 +65,8 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
 
     #  ============== PROCESSING THE RAW EMG DATA ==============
     # iterate through emg files and load:
+    col_names = ['sn','BN','TN','trial_correct','state','time','e1', 'e2', 'e3', 'e4', 'e5', 'f1', 'f2', 'f3', 'f4', 'f5']
+    df_emg = pd.DataFrame(columns=col_names)
     uniqueBN = np.unique(D.BN)
     for i, bn in enumerate(uniqueBN):
         # getting the name of the file:
@@ -82,16 +84,14 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
 
         # wanted channel names:
         channel_names = ['Analog 1', 'ext_D1', 'ext_D2', 'ext_D3', 'ext_D4', 'ext_D5', 'flx_D1', 'flx_D2', 'flx_D3', 'flx_D4', 'flx_D5']
-        col_names = ['sn','BN','TN','state','e1', 'e2', 'e3', 'e4', 'e5', 'f1', 'f2', 'f3', 'f4', 'f5']
-        df_emg = pd.DataFrame(columns=col_names)
 
         # Extract the wanted signals from the csv file
         raw_emg = np.zeros((data.shape[0],2*len(channel_names)), dtype=np.float32)
         col = 0
         for name in channel_names:
-            for i, col_name in enumerate(header):
+            for i_col, col_name in enumerate(header):
                 if name in col_name:
-                    raw_emg[:,col] = data.iloc[0:, i].to_numpy()
+                    raw_emg[:,col] = data.iloc[0:, i_col].to_numpy()
                     col = col+1
 
         # find trial indices based on triggers:
@@ -103,16 +103,18 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
                                                                                                 threshold=threshold, debug=debug)
         # get the full emg signal:
         sig = raw_emg[:,3::2]
+        sig = np.nan_to_num(sig, nan=0.0)
 
         # bandpass filter the whole signal:
         sos = signal.butter(2, bpf, btype='bandpass', fs=fs_emg, output='sos')  # using 'sos' to avoid numerical errors
         sig_filtered = signal.sosfiltfilt(sos, sig, axis=0)
-
+        
         sos_lpf = signal.butter(2, lpf, btype='lowpass', fs=fs_emg, output='sos')
         # get the trials:
-        for i, idx in enumerate(trial_start_idx):
-            trial_sig = sig_filtered[idx:trial_end_idx[i]]
-            trial_time = t_signal[idx:trial_end_idx[i]] - t_signal[idx]
+        for i_trial, idx in enumerate(trial_start_idx):
+            print(i_trial)
+            trial_sig = sig_filtered[idx:trial_end_idx[i_trial]]
+            trial_time = (t_signal[idx:trial_end_idx[i_trial]] - t_signal[idx]) * 1000  # in ms
 
             # de-mean rectify the signal:
             trial_sig = np.abs(trial_sig - np.mean(trial_sig, axis=0))
@@ -120,22 +122,29 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
             # low-pass filter the demeaned signal:
             trial_sig_filtered = signal.sosfiltfilt(sos_lpf, trial_sig, axis=0)
 
-            col_names = ['sn','BN','TN','trial_correct','state','time','e1', 'e2', 'e3', 'e4', 'e5', 'f1', 'f2', 'f3', 'f4', 'f5']
-            tmp_sn = np.full_like(trial_sig_filtered[:,0], subject)
-            tmp_BN = np.full_like(trial_sig_filtered[:,0], bn)
-            tmp_TN = np.full_like(trial_sig_filtered[:,0], i+1)
-            tmp_trial_correct = np.full_like(trial_sig_filtered[:,0], D[(D['BN'] == bn) & (D['TN'] == i+1)]['trial_correct'].values)
+            
+            tmp_sn = np.full_like(trial_sig_filtered[:,0], subject, dtype=int)
+            tmp_BN = np.full_like(trial_sig_filtered[:,0], bn, dtype=int)
+            tmp_TN = np.full_like(trial_sig_filtered[:,0], i_trial+1, dtype=int)
+            tmp_trial_correct = np.full_like(trial_sig_filtered[:,0], D[(D['BN'] == bn) & (D['TN'] == i_trial+1)]['trial_correct'].values, dtype=int)
             
             # match mov with emg:
-            mov_time = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i+1)]['time'].values
-            mov_states = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i+1)]['state'].values
+            mov_time = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i_trial+1)]['time'].values
+            mov_states = df_mov[(df_mov['BN'] == bn) & (df_mov['TN'] == i_trial+1)]['state'].values
             unique_states = np.unique(mov_states)
             tmp_state = np.full_like(trial_sig_filtered[:,0], 0)
-            for state in unique_states:
-                t1 = mov_time[mov_states == state][0]
-                t2 = mov_time[mov_states == state][-1]
-                idx = np.where((trial_time >= t1) & (trial_time <= t2))[0]
-                tmp_state[idx] = state
+            for j, state in enumerate(unique_states):
+                first_index = np.where(mov_states == state)[0][0]
+                last_index = np.where(mov_states == state)[0][-1]
+
+                t1 = mov_time[first_index]
+                if j != len(unique_states)-1:
+                    t2 = mov_time[last_index+1]
+                else:
+                    t2 = mov_time[last_index]
+
+                idx_time = np.where((trial_time >= t1) & (trial_time < t2))[0]
+                tmp_state[idx_time] = state
             
             # fill in the dataframe:
             tmp = pd.DataFrame({'sn': tmp_sn, 'BN': tmp_BN, 'TN': tmp_TN, 'trial_correct': tmp_trial_correct, 
