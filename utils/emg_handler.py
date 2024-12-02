@@ -89,12 +89,12 @@ def find_trigger_rise_edge(t_trig, trig, t_signal, threshold=0.1, debug=0):    #
     for i in range(len(trig_riseTime)):
         # get rise index:
         tDiff = np.absolute(t_signal - trig_riseTime[i])
-        trial_start_idx[i] = np.argmin(tDiff)
-        riseTime[i] = t_signal[np.argmin(tDiff)]
+        trial_start_idx[i] = np.nanargmin(tDiff)
+        riseTime[i] = t_signal[np.nanargmin(tDiff)]
 
         tDiff = np.absolute(t_signal - trig_fallTime[i])
-        trial_end_idx[i] = np.argmin(tDiff)
-        fallTime[i] = t_signal[np.argmin(tDiff)]
+        trial_end_idx[i] = np.nanargmin(tDiff)
+        fallTime[i] = t_signal[np.nanargmin(tDiff)]
 
     return trial_start_idx, trial_end_idx, riseTime, fallTime 
 
