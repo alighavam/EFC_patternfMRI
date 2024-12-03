@@ -33,7 +33,7 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
     # empty dataframe to store the data:
     D = pd.DataFrame()
     df_mov = pd.DataFrame(columns=['sn', 'BN', 'TN', 'trial_correct', 'state', 'time','f1','f2','f3','f4','f5'])
-
+    
     # Load the .dat file:
     dat_file_name = os.path.join(DATA_PATH, 'behavioural', f'subj{subject}', f'efcp_{subject}.dat') 
     dat = pd.read_csv(dat_file_name, sep='\t')
