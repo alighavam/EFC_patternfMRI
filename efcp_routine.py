@@ -21,7 +21,7 @@ def trial_routine(row):
 
     return C
 
-def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=30, debug=0):
+def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=20, debug=0):
     """
     This function is used to preprocess the data of a subject
     
@@ -33,7 +33,7 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
     # empty dataframe to store the data:
     D = pd.DataFrame()
     df_mov = pd.DataFrame(columns=['sn', 'BN', 'TN', 'trial_correct', 'state', 'time','f1','f2','f3','f4','f5'])
-    
+
     # Load the .dat file:
     dat_file_name = os.path.join(DATA_PATH, 'behavioural', f'subj{subject}', f'efcp_{subject}.dat') 
     dat = pd.read_csv(dat_file_name, sep='\t')
@@ -160,60 +160,9 @@ def subject_routine(subject, fs_force=500, fs_emg=2148.1481, bpf=[20, 500], lpf=
 
     return D, df_mov, df_emg
 
-def ppp(subjNum, smoothing_window=30, fs=500):
-    datFileName = os.path.join(DATA_PATH, 'behavioural', f'subj{subjNum}', f'efcp_{subjNum}.dat')   # input .dat file
-    outFileName = os.path.join(ANALYSIS_PATH, f'subj{subjNum}', f'efcp_{subjNum}.csv')   # input .dat file
+def prep_natural_emg(fname, fs_emg=2148.1481, bpf=[20, 500], lpf=20, debug=0):
+    '''
+    Processing the natural emg data
+    '''
 
-    D = pd.read_table(datFileName)
-    D = D.loc[:, ~D.columns.str.contains('^Unnamed')]
-
-    # cleaning up the D dataframe:
-    D.rename(columns={'subNum': 'sn'}, inplace=True)
-    D.loc[D['RT'] != 10000, 'RT'] = D['RT'] - 1400
-    D.rename(columns={'RT': 'ET'}, inplace=True)
-
-
-    # loading mov files and appending each block to movList:
-    oldBlock = -1
-    movList = []
-    for i in range(len(D.BN)):
-        if (oldBlock != D.BN[i]):
-            # load mov file
-            movPath = scriptPath + '/data/' + subjName + '/efc1_' + subjName[-2:] + '_' + '{:02d}.mov'.format(D.BN[i])
-            mov = dataLoader.movload(movPath)
-            movList.extend(mov)
-            # print(mov[0])
-            oldBlock = D.BN[i]
-            print(len(movList))
     
-    # adding the mov data to the dataframe
-    D['mov'] = movList
-
-    # loading emg data:
-    emgList = [] # list to contain all emg trials
-
-    # iterate through emg files and load:
-    uniqueBN = np.unique(D.BN)
-    for i in range(len(uniqueBN)):
-        # getting the name of the file:
-        fname = scriptPath + '/data/' + subjName + '/efc1_EMG_' + subjName[-2:] + '_' + '{:02d}.csv'.format(uniqueBN[i])
-
-        # loading emg and separating trials:
-        emg_selected, fs = dataLoader.emgload(fname, riseThresh=0.5, fallThresh=0.5, debug=0)
-
-        # down sampling the signals:
-        emg_selected, fs = emgHandler.downsample_emg(emg_selected, fs, target_fs=1000, debug=0)
-
-        # filtering the signals - bandpass:
-        emg_selected = emgHandler.filter_emg(emg_selected, fs=fs, low=20, high=500, order=2, debug=0)
-
-        # rectifying the signals:
-        emg_selected = emgHandler.rectify_emg(emg_selected, debug=0)
-
-        # adding emg data of trials to emgList:
-        emgList.extend(emg_selected)
-
-    # adding emg data to the dataframe:
-    D['emg'] = emgList
-
-    return D

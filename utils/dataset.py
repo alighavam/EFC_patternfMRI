@@ -56,38 +56,29 @@ def emgload(fname, channel_names, riseThresh=0.5, fallThresh=0.5, debug=0):
 
         fs: sampling frequency of the emg data.
     '''
-    # loading emg file:
-    
+    # load and clean up the file:
+    file = pd.read_csv(fname, header=None, delimiter=',', skiprows=5) 
+    file.drop(index=1, inplace=True)
+    file.reset_index(drop=True, inplace=True)
+    # header columns names:
+    header = file.iloc[0].values
+    # the emg signals:
+    data = file[1:]
+    data = data.apply(pd.to_numeric, errors='coerce').astype(float)
 
-    # loading emg file:
-    column_names = [i for i in range(0, 7)] # hard coded number of columns in dataframe - ideally you should calculate maximum of number of columns for future use of the code
-    data = pd.read_csv(fname, header=None, delimiter=',', names=column_names)   # loads .csv file into a dataframe
-    fs = float(data[0][6].split()[0])   # getting the sampling rate of the data - hard coded to get fs. Also, assumed that all emg channels have the same fs.
-    raw_emg = pd.DataFrame(data.iloc[7:], dtype=float)  # making a new dataframe containing only the raw emg data - hard coded row num
-    raw_emg = raw_emg.reset_index(drop=True)
-    
-    # finding triggers:
-    trig = raw_emg[0]   # trigger channel
-    riseIdx, fallIdx = emg_handler.find_trigger_rise_edge(trig, fs, riseThresh, fallThresh, debug) # trigger detector function
-    
-    # slecting emg data of each trial based on triggers
-    emg_selected = [] # empty list to contain emg data
-    for i in range(len(riseIdx)):
-        # starting index of trial i:
-        idxStart = riseIdx[i]
+    # wanted channel names:
+    channel_names = ['Analog 1', 'ext_D1', 'ext_D2', 'ext_D3', 'ext_D4', 'ext_D5', 'flx_D1', 'flx_D2', 'flx_D3', 'flx_D4', 'flx_D5']
 
-        # ending index of trial i:
-        idxEnd = fallIdx[i]     
-
-        # selecting emg data. Channel 0 is trigger so it's not included:
-        emg_tmp = raw_emg.iloc[idxStart:idxEnd,1:].to_numpy()  
-
-        # append trial's emg data to emg_selected , the format of emg_tmp is (N by ChannelNum):
-        emg_selected.append(emg_tmp)   
-        # print("Trial {}:\n".format(i), len(emg_tmp[:,0])) # a sanity check
+    # Extract the wanted signals from the csv file
+    raw_emg = np.zeros((data.shape[0],2*len(channel_names)), dtype=np.float32)
+    col = 0
+    for name in channel_names:
+        for i_col, col_name in enumerate(header):
+            if name in col_name:
+                raw_emg[:,col] = data.iloc[0:, i_col].to_numpy()
+                col = col+1
     
-    # print(np.shape(emg_selected[99])) # sanity check
-    return emg_selected, fs
+    return raw_emg
 
 def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True):
     '''
