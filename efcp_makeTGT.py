@@ -113,6 +113,68 @@ def makeTGT_training(subNum):
             df.to_csv(os.path.join('target', fname), sep='\t', index=False)
             print(f'{fname} saved!')
 
+def makeTGT_fMRI(subNum):
+    ''' 
+        make target files for fMRI experiment
+    '''
+    # chord list:
+    set = np.array([91999,99199,99919,92999,99299,99929,
+                     91199,91919,99119,91299,91929,92199,92919,99129,99219,92299,92929,99229,
+                     91119,91129,91219,92119,91229,92129,92219,92229])
+
+    nDays = 2
+    nRep = 2 # number of repetition of each chord
+    nRuns = 8
+
+    # params:
+    # trial timings:
+    planTime = 0  # time for planning, if 0, go-cue is presented immediately
+    execMaxTime = 3000  # maximum allowed time for execution
+    success_holdTime = 600  # hold time of the chord
+    feedbackTime = 1000  # time to present feedback
+    iti = 0
+
+    # scanner related timings:
+    start_acq = 3000    # time to start the acquisition. for signal to reach equilibrium
+    buff = 1000         # buffer time between trials.
+    rest = 12000        # rest interval durations.
+    end_acq = 10500     # how long to wait after the last trial before stopping the acquisition. Because BOLD is slow.
+
+    for i in range(nDays):
+        for r in range(nRuns):
+            np.random.shuffle(set)
+            half1 = np.repeat(set, nRep)
+            np.random.shuffle(set)
+            half2 = np.repeat(set, nRep)
+            trials = np.concatenate((half1, half2))
+            
+            # make tgt files:
+            # target file columns:
+            column_names = ['subNum', 'chordID', 'planTime', 'success_holdTime', 'execMaxTime', 'feedbackTime', 'iti', 'startTime', 'endTime']
+            df = pd.DataFrame(columns=column_names)
+            df['chordID'] = trials
+            df['subNum'] = np.full_like(trials, subNum)
+            df['planTime'] = np.full_like(trials, planTime)
+            df['success_holdTime'] = np.full_like(trials, success_holdTime)
+            df['execMaxTime'] = np.full_like(trials, execMaxTime)
+            df['feedbackTime'] = np.full_like(trials, feedbackTime)
+            df['iti'] = np.full_like(trials, iti)
+
+            # make start times:
+            df['startTime'] = start_acq + np.arange(len(trials))*(execMaxTime + feedbackTime + iti + buff)
+            df.loc[26:, 'startTime'] += rest - (execMaxTime + feedbackTime + iti + buff)
+            df.loc[52:, 'startTime'] += rest - (execMaxTime + feedbackTime + iti + buff)
+            df.loc[78:, 'startTime'] += rest - (execMaxTime + feedbackTime + iti + buff)
+
+            # make end times:
+            df['endTime'] = np.zeros(len(trials))
+            df.loc[df.index[-1], 'endTime'] += df.loc[df.index[-1], 'startTime'] + end_acq
+
+            # saving the tgt file:
+            fname = f'efcp_s{subNum}_scan_day{i+1}_run{r+1:02d}.tgt'
+            df.to_csv(os.path.join('target', fname), sep='\t', index=False)
+            print(f'{fname} saved!')
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--subNum', default='100',
@@ -128,6 +190,8 @@ if __name__ == "__main__":
         makeTGT_emg(subNum)
     elif experiment == 'train':
         makeTGT_training(subNum)  
+    elif experiment == 'fMRI':
+        makeTGT_fMRI(subNum)
     else:
         raise ValueError('Unknown experiment type!')
         
