@@ -158,7 +158,7 @@ def makeTGT_fMRI(subNum):
             df['success_holdTime'] = np.full_like(trials, success_holdTime)
             df['execMaxTime'] = np.full_like(trials, execMaxTime)
             df['feedbackTime'] = np.full_like(trials, feedbackTime)
-            df['iti'] = np.full_like(trials, iti)
+            df['iti'] = np.full_like(trials, iti, dtype=int)
 
             # make start times:
             df['startTime'] = start_acq + np.arange(len(trials))*(execMaxTime + feedbackTime + iti + buff)
@@ -167,7 +167,7 @@ def makeTGT_fMRI(subNum):
             df.loc[78:, 'startTime'] += rest - (execMaxTime + feedbackTime + iti + buff)
 
             # make end times:
-            df['endTime'] = np.zeros(len(trials))
+            df['endTime'] = np.zeros(len(trials), dtype=int)
             df.loc[df.index[-1], 'endTime'] += df.loc[df.index[-1], 'startTime'] + end_acq
 
             # saving the tgt file:
