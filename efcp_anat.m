@@ -166,8 +166,8 @@ function varargout = efcp_anat(what, varargin)
             if isempty(sn)
                 error('SURF:reconall -> ''sn'' must be passed to this function.')
             end
-
-            subj_row = getrow(pinfo,pinfo.sn == sn);
+            
+            subj_row = getrow(pinfo, pinfo.sn == sn);
             subj_id = subj_row.participant_id{1};   
         
             % recon all inputs
@@ -179,26 +179,24 @@ function varargout = efcp_anat(what, varargin)
             freesurfer_reconall(fs_dir, subj_id, ...
                 fullfile(anatomical_dir, subj_id, anatomical_name));
             
-        case 'SURF:fs2wb'          % Resampling subject from freesurfer fsaverage to fs_LR        
-        res  = 32;          % resolution of the atlas. options are: 32, 164
-        hemi = [1, 2];      % list of hemispheres
-        
-        sn=[];
-        vararginoptions(varargin,{'sn'})
-        if isempty(sn)
-            error('SURF:fs2wb -> ''sn'' must be passed to this function.')
-        end
-
-        subj_row=getrow(pinfo,pinfo.sn== s );
-        subj_id = subj_row.participant_id{1};  
-        
-        % get the subject id folder name
-        % outDir   = fullfile(baseDir, surfacewbDir; 
-        dircheck(outDir);
-        fs_dir = fullfile(baseDir,freesurferDir);
-        surf_resliceFS2WB(sub_id, fs_dir, outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
+        case 'SURF:fs2wb'          
+            % Resampling subject from freesurfer fsaverage to fs_LR        
+            res  = 32;          % resolution of the atlas. options are: 32, 164
+            hemi = [1, 2];      % list of hemispheres
+            
+            sn=[];
+            vararginoptions(varargin,{'sn'})
+            if isempty(sn)
+                error('SURF:fs2wb -> ''sn'' must be passed to this function.')
+            end
     
+            subj_row = getrow(pinfo,pinfo.sn == sn);
+            subj_id = subj_row.participant_id{1};  
+            
+            % get the subject id folder name
+            outDir = fullfile(baseDir, surfacewbDir); 
+            fs_dir = fullfile(baseDir,freesurferDir);
+            surf_resliceFS2WB(subj_id, fs_dir, outDir, 'hemisphere', hemi, 'resolution', sprintf('%dk', res))
     end
-
 end
     
