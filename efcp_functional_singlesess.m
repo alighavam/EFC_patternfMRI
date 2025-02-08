@@ -1,4 +1,4 @@
-function varargout = template_functional_singlesess(what, varargin)
+function varargout = efcp_functional_singlesess(what, varargin)
     % Use a different baseDir when using your local machine or the cbs
     % server. Add more directory if needed. Use single quotes ' and not
     % double quotes " because some spm function raise error with double
@@ -32,7 +32,7 @@ function varargout = template_functional_singlesess(what, varargin)
     subj_row = getrow(pinfo, pinfo.sn == sn);
     
     % get subj_id
-    subj_id = subj_row.subj_id{1};
+    subj_id = subj_row.participant_id{1};
 
     % get runs (FuncRuns column needs to be in participants.tsv)    
     runs = spmj_dotstr2array(subj_row.FuncRuns{1});
@@ -97,8 +97,8 @@ function varargout = template_functional_singlesess(what, varargin)
             phase = [fmapPhaseName_tmp '.nii.gz'];
 
             % path to the subj fmap data:
-            magnitude_path = fullfile(baseDir,bidsDir,sprintf('subj%.02d',sn),'fmap',magnitude);
-            phase_path = fullfile(baseDir,bidsDir,sprintf('subj%.02d',sn),'fmap',phase);
+            magnitude_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'fmap',magnitude);
+            phase_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'fmap',phase);
     
             % destination path:
             output_folder = fullfile(baseDir,fmapDir,subj_id);
