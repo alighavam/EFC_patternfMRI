@@ -29,14 +29,14 @@ function varargout = template_functional_singlesess(what, varargin)
     end
 
     % get participant row from participant.tsv
-    subj_row=getrow(pinfo, pinfo.sn== sn);
-
+    subj_row = getrow(pinfo, pinfo.sn == sn);
+    
     % get subj_id
     subj_id = subj_row.subj_id{1};
 
     % get runs (FuncRuns column needs to be in participants.tsv)    
     runs = spmj_dotstr2array(subj_row.FuncRuns{1});
-
+    
     switch(what)
         case 'BIDS:move_unzip_raw_func'
             % Moves, unzips and renames raw functional (BOLD) images from 
@@ -46,16 +46,15 @@ function varargout = template_functional_singlesess(what, varargin)
             
             % loop on runs of sess:
             for run = runs
-                
                 % pull functional raw name from the participant.tsv:
                 FuncRawName_tmp = [pinfo.FuncRawName{pinfo.sn==sn} '.nii.gz'];  
-
+                
                 % add run number to the name of the file:
                 FuncRawName_tmp = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
-
+                
                 % path to the subj func data:
-                func_raw_path = fullfile(baseDir,bidsDir,sprintf('subj%.02d',sn),'func',FuncRawName_tmp);
-        
+                func_raw_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',FuncRawName_tmp);
+                
                 % destination path:
                 output_folder = fullfile(baseDir,imagingRawDir,subj_id);
                 output_file = fullfile(output_folder,[subj_id sprintf('_run_%.02d.nii.gz',run)]);
@@ -69,13 +68,13 @@ function varargout = template_functional_singlesess(what, varargin)
                 if ~status  
                     error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
                 end
-        
+                
                 % unzip the .gz files to make usable for SPM:
                 gunzip(output_file);
-        
+                
                 % delete the compressed file:
                 delete(output_file);
-            end   
+            end
     
         case 'BIDS:move_unzip_raw_fmap'
             % Moves, unzips and renames raw fmap images from BIDS
