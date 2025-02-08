@@ -47,18 +47,22 @@ function varargout = efcp_functional_singlesess(what, varargin)
             % loop on runs of sess:
             for run = runs
                 % pull functional raw name from the participant.tsv:
-                FuncRawName_tmp = [pinfo.FuncRawName{pinfo.sn==sn} '.nii.gz'];  
-                
+                FuncRawName_tmp = [pinfo.FuncRawName{pinfo.sn==sn} '.nii.gz'];
+                sbref_raw_name = [pinfo.sbref_name{pinfo.sn==sn} '.nii.gz'];
+
                 % add run number to the name of the file:
                 FuncRawName_tmp = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
-                
+                sbref_raw_name = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
+
                 % path to the subj func data:
                 func_raw_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',FuncRawName_tmp);
+                sbref_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',sbref_raw_name);
                 
                 % destination path:
                 output_folder = fullfile(baseDir,imagingRawDir,subj_id);
                 output_file = fullfile(output_folder,[subj_id sprintf('_run_%.02d.nii.gz',run)]);
-                
+                sbref_output_file = fullfile(output_folder,[subj_id sprintf('_run_%.02d_sbref.nii.gz',run)]);
+
                 if ~exist(output_folder,"dir")
                     mkdir(output_folder);
                 end
@@ -69,11 +73,16 @@ function varargout = efcp_functional_singlesess(what, varargin)
                     error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
                 end
                 
+                % copy sbref to destination:
+                [status,msg] = copyfile(sbref_path,sbref_output_file);
+                
                 % unzip the .gz files to make usable for SPM:
                 gunzip(output_file);
+                gunzip(sbref_output_file);
                 
                 % delete the compressed file:
                 delete(output_file);
+                delete(sbref_output_file);
             end
     
         case 'BIDS:move_unzip_raw_fmap'
@@ -167,12 +176,15 @@ function varargout = efcp_functional_singlesess(what, varargin)
             
             epi_list = {}; % Initialize as an empty cell array
             for run = runs
-                epi_list{end+1} = replace(subj_row.FuncRawName, 'XX', sprinf('%02d', run));
+                epi_list{end+1} = sprintf('%s_run_%.2d_sbref.nii',subj_id,run);
             end
-
-            [et1, et2, tert] = spmj_et1_et2_tert(fullfile(baseDir, bidsDir, subj_id, 'fmap'),... 
-                fullfile(baseDir, bidsDir, subj_id, 'func'),...
-                num2str(sn));
+            
+            % [et1, et2, tert] = spmj_et1_et2_tert(fullfile(baseDir, bidsDir, subj_id, 'fmap'),... 
+            %     fullfile(baseDir, bidsDir, subj_id, 'func'),...
+            %     num2str(sn));
+            et1 = 0.00408*1000;
+            et2 = 0.0051*1000;
+            tert = 0.000334996*90*1000;
 
             spmj_makefieldmap(fullfile(baseDir, fmapDir, subj_id), ...
                               sprintf('%s_magnitude.nii', subj_id),...
@@ -182,8 +194,7 @@ function varargout = efcp_functional_singlesess(what, varargin)
                               'et2', et2, ...
                               'tert', tert, ...
                               'func_dir',fullfile(baseDir, imagingRawDir, subj_id),...
-                              'epi_files', epi_files);
-
+                              'epi_files', epi_list);
         
         case 'FUNC:realign_unwarp'      
             % Do spm_realign_unwarp
