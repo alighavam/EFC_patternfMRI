@@ -52,7 +52,7 @@ function varargout = efcp_functional_singlesess(what, varargin)
 
                 % add run number to the name of the file:
                 FuncRawName_tmp = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
-                sbref_raw_name = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
+                sbref_raw_name = replace(sbref_raw_name,'XX',sprintf('%.02d',run));
 
                 % path to the subj func data:
                 func_raw_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',FuncRawName_tmp);
@@ -139,7 +139,31 @@ function varargout = efcp_functional_singlesess(what, varargin)
     
             % delete the compressed file:
             delete(output_phase);
-    
+        
+        case 'FUNC:fix_dtype'
+            % Aftet Khanlab gradcorrect, data is transformed from uint16 to
+            % int16. This makes some positive values in some images to be
+            % negative. This function fixes this in imaging_data_raw.
+            
+            for run = runs
+                epi_file = sprintf('%s_run_%.2d.nii',subj_id,run);
+                sbref_file = sprintf('%s_run_%.2d_sbref.nii',subj_id,run);
+
+                epi = niftiread(fullfile(baseDir, imagingRawDir, subj_id, epi_file));
+                epi_info = niftiinfo(fullfile(baseDir, imagingRawDir, subj_id, epi_file));
+                epi_uint16 = typecast(epi(:), 'uint16');
+                epi_uint16 = reshape(epi_uint16, size(epi));
+                epi_info.Datatype = 'uint16';
+                niftiwrite(epi_uint16, fullfile(baseDir, imagingRawDir, subj_id, epi_file), epi_info);
+
+                sbref = niftiread(fullfile(baseDir, imagingRawDir, subj_id, sbref_file));
+                sbref_info = niftiinfo(fullfile(baseDir, imagingRawDir, subj_id, sbref_file));
+                sbref_uint16 = typecast(sbref(:), 'uint16');
+                sbref_uint16 = reshape(sbref_uint16, size(sbref));
+                sbref_info.Datatype = 'uint16';
+                niftiwrite(sbref_uint16, fullfile(baseDir, imagingRawDir, subj_id, sbref_file), sbref_info);
+            end
+            
         case 'FUNC:make_fmap'                
             % Differences in magnetic susceptibility between tissues (e.g.,
             % air-tissue or bone-tissue interfaces) can cause
@@ -196,6 +220,40 @@ function varargout = efcp_functional_singlesess(what, varargin)
                               'func_dir',fullfile(baseDir, imagingRawDir, subj_id),...
                               'epi_files', epi_list);
         
+        case 'FUNC:append_sbref_to_epi'
+            % put sbref as the first volume of the epi images for
+            % realignment. Note that the rtm option must be set 0 so that
+            % spm_realign(), realigns to the first volume. 
+
+            for run = runs
+                epi_file = fullfile(baseDir, imagingRawDir, subj_id, sprintf('%s_run_%.2d.nii',subj_id,run));
+                sbref_file = fullfile(baseDir, imagingRawDir, subj_id, sprintf('%s_run_%.2d_sbref.nii',subj_id,run));
+                
+                % Load the NIfTI header and image data
+                V = spm_vol(epi_file); % Get volume headers
+                Y = spm_read_vols(V);   % Load image data (4D array)
+                
+                % Load the new volume to add (must match the existing volume size)
+                V_sbref = spm_vol(sbref_file);
+                Y_sbref = spm_read_vols(V_sbref);
+                
+                % Prepend the new volume (add it at the beginning)
+                Y_updated = cat(4, Y_sbref, Y);
+                
+                % Create new NIfTI headers for the updated file
+                V_new = repmat(V(1), size(Y_updated, 4), 1); % Copy metadata
+                for i = 1:length(V_new)
+                    V_new(i).fname = epi_file; % New filename
+                    V_new(i).n = [i,1]; % Update volume index
+                end
+                
+                % Save the updated NIfTI file
+                for i = 1:num_vols
+                    spm_write_vol(V_new(i), Y_updated(:,:,:,i));
+                end
+
+            end
+
         case 'FUNC:realign_unwarp'      
             % Do spm_realign_unwarp
 
