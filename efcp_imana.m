@@ -95,103 +95,56 @@ function varargout = efcp_imana(what, varargin)
             % geometric distortions (unwarping) in other MRI sequences.
 
             for i = 1:length(ses)
-                runs = spmj_dotstr2array(participant_row.(sprintf('run_ses%d',i)){1});
-                fmap_ = sprintf('%s.nii.gz', participant_row.(sprintf('func_name_ses%d',i)){1});
+                fmap_magnitude_name = participant_row.fmap_magnitude{1};
+                fmap_phase_name = participant_row.fmap_phase{1};
                 
-                % loop on runs of sess:
-                for run = runs
-                    % add run number to the name of the functional file:
-                    func_name = replace(func_tmp_name,'XX',sprintf('%.02d',run));
-                    
-                    % path to the subj func file:
-                    func_file = fullfile(baseDir,bidsDir,sprintf('sub-%s',participant_id),sprintf('ses-%s',ses{i}),'func',func_name);
-                    
-                    % destination path:
-                    output_folder = fullfile(baseDir,imagingRawDir,participant_id,sprintf('ses-%s',ses{i}));
-                    output_file = fullfile(output_folder,[participant_id sprintf('_run_%.02d.nii.gz',run)]);
-                    
-                    if ~exist(output_folder,"dir")
-                        mkdir(output_folder);
-                    end
-                    
-                    % copy file to destination:
-                    [status,msg] = copyfile(func_file,output_file);
-                    if ~status  
-                        error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
-                    end
-                    
-                    % unzip the .gz files to make usable for SPM:
-                    gunzip(output_file);
+                magnitude = dir(fullfile(baseDir, bidsDir, sprintf('sub-%s',participant_id), sprintf('ses-%s',ses{i}), 'fmap', ['*_' fmap_magnitude_name '.nii.gz']));
+                magnitude_path = fullfile(magnitude.folder, magnitude.name);
+                phase = dir(fullfile(baseDir, bidsDir, sprintf('sub-%s',participant_id), sprintf('ses-%s',ses{i}), 'fmap', ['*_' fmap_phase_name '.nii.gz']));
+                phase_path = fullfile(phase.folder, phase.name);
 
-                    % delete the compressed file:
-                    delete(output_file);
+                output_dir = fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}));
+                if ~exist(output_dir,'dir')
+                    mkdir(output_dir)
                 end
-            end
-            
-            % pull fmap raw names from the participant.tsv:
-            fmapMagnitudeName_tmp = pinfo.fmapMagnitudeName{pinfo.sn==sn};
-            magnitude = [fmapMagnitudeName_tmp '.nii.gz'];
-            
-            fmapPhaseName_tmp = pinfo.fmapPhaseName{pinfo.sn==sn};
-            phase = [fmapPhaseName_tmp '.nii.gz'];
+                output_magnitude_path = fullfile(output_dir, sprintf('%s_magnitude.nii.gz',participant_id));
+                output_phase_path = fullfile(output_dir, sprintf('%s_phase.nii.gz',participant_id));
 
-            % path to the subj fmap data:
-            magnitude_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'fmap',magnitude);
-            phase_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'fmap',phase);
-    
-            % destination path:
-            output_folder = fullfile(baseDir,fmapDir,subj_id);
-            output_magnitude = fullfile(output_folder,[subj_id '_magnitude.nii.gz']);
-            output_phase = fullfile(output_folder,[subj_id '_phase.nii.gz']);
-            
-            if ~exist(output_folder,"dir")
-                mkdir(output_folder);
-            end
-            
-            % copy magnitude to destination:
-            [status,msg] = copyfile(magnitude_path,output_magnitude);
-            if ~status  
-                error('BIDS:move_unzip_raw_fmap -> subj %d, fmap magnitude was not moved from BIDS to the destenation:\n%s',sn,msg)
-            end
-            % unzip the .gz files to make usable for SPM:
-            gunzip(output_magnitude);
-    
-            % delete the compressed file:
-            delete(output_magnitude);
+                [status,msg] = copyfile(magnitude_path,output_magnitude_path);
+                [status,msg] = copyfile(phase_path,output_phase_path);
 
-            % copy phase to destination:
-            [status,msg] = copyfile(phase_path,output_phase);
-            if ~status  
-                error('BIDS:move_unzip_raw_fmap -> subj %d, fmap phase was not moved from BIDS to the destenation:\n%s',sn,msg)
+                % unzip the .gz files to make usable for SPM:
+                gunzip(output_magnitude_path);
+                delete(output_magnitude_path);
+
+                gunzip(output_phase_path);
+                delete(output_phase_path);
             end
-            % unzip the .gz files to make usable for SPM:
-            gunzip(output_phase);
-    
-            % delete the compressed file:
-            delete(output_phase);
         
         case 'FUNC:fix_dtype'
-            % Aftet Khanlab gradcorrect, data is transformed from uint16 to
+            % After Khanlab gradcorrect, data is transformed from uint16 to
             % int16. This makes some positive values in some images to be
             % negative. This function fixes this in imaging_data_raw.
             
-            for run = runs
-                epi_file = sprintf('%s_run_%.2d.nii',subj_id,run);
-                sbref_file = sprintf('%s_run_%.2d_sbref.nii',subj_id,run);
-
-                epi = niftiread(fullfile(baseDir, imagingRawDir, subj_id, epi_file));
-                epi_info = niftiinfo(fullfile(baseDir, imagingRawDir, subj_id, epi_file));
-                epi_uint16 = typecast(epi(:), 'uint16');
-                epi_uint16 = reshape(epi_uint16, size(epi));
-                epi_info.Datatype = 'uint16';
-                niftiwrite(epi_uint16, fullfile(baseDir, imagingRawDir, subj_id, epi_file), epi_info);
-
-                sbref = niftiread(fullfile(baseDir, imagingRawDir, subj_id, sbref_file));
-                sbref_info = niftiinfo(fullfile(baseDir, imagingRawDir, subj_id, sbref_file));
-                sbref_uint16 = typecast(sbref(:), 'uint16');
-                sbref_uint16 = reshape(sbref_uint16, size(sbref));
-                sbref_info.Datatype = 'uint16';
-                niftiwrite(sbref_uint16, fullfile(baseDir, imagingRawDir, subj_id, sbref_file), sbref_info);
+            % Get all .nii files in all subdirectories
+            file_list = dir(fullfile(baseDir, imagingRawDir, participant_id, '**', '*.nii'));
+            
+            % Loop through each found file
+            for i = 1:length(file_list)
+                % Get the full path of the file
+                file_path = fullfile(file_list(i).folder, file_list(i).name);
+                
+                % Perform the desired operation on the file
+                fprintf('Processing file: %s\n', file_path);
+                
+                epi = niftiread(file_path);
+                if ~isa(epi, 'uint16')
+                    epi_info = niftiinfo(file_path);
+                    epi_uint16 = typecast(epi(:), 'uint16');
+                    epi_uint16 = reshape(epi_uint16, size(epi));
+                    epi_info.Datatype = 'uint16';
+                    niftiwrite(epi_uint16, file_path, epi_info);
+                end
             end
             
         case 'FUNC:make_fmap'                
@@ -228,62 +181,30 @@ function varargout = efcp_imana(what, varargin)
             % intermediate file wfmag_<subj_id>_run_XX.nii that is
             % necessary to perform unwarping in eah run.
             
-            epi_list = {}; % Initialize as an empty cell array
-            for run = runs
-                epi_list{end+1} = sprintf('%s_run_%.2d_sbref.nii',subj_id,run);
+            for i = 1:length(ses)
+                epi_path = fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}));
+                fmap_path = fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}));
+                
+                epi_files = dir(fullfile(epi_path, '*.nii'));
+                fmap_magnitude = fullfile(fmap_path, [participant_id '_magnitude.nii']);
+                fmap_phaes = fullfile(fmap_path, [participant_id '_phase.nii']);
+                
+                % params:
+                et1 = 0.00408*1000;
+                et2 = 0.0051*1000;
+                tert = 0.000334996*90*1000;
+                
+                spmj_makefieldmap(fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i})), ...
+                                  sprintf('%s_magnitude.nii', participant_id),...
+                                  sprintf('%s_phase.nii', participant_id),...
+                                  'phase_encode', -1, ... % It's -1 (A>>P) or 1 (P>>A) and can be found in imaging sequence specifications
+                                  'et1', et1, ...
+                                  'et2', et2, ...
+                                  'tert', tert, ...
+                                  'func_dir',fullfile(baseDir, imagingRawDir, participant_id),...
+                                  'epi_files', {epi_files.name});
             end
             
-            % [et1, et2, tert] = spmj_et1_et2_tert(fullfile(baseDir, bidsDir, subj_id, 'fmap'),... 
-            %     fullfile(baseDir, bidsDir, subj_id, 'func'),...
-            %     num2str(sn));
-            et1 = 0.00408*1000;
-            et2 = 0.0051*1000;
-            tert = 0.000334996*90*1000;
-            
-            spmj_makefieldmap(fullfile(baseDir, fmapDir, subj_id), ...
-                              sprintf('%s_magnitude.nii', subj_id),...
-                              sprintf('%s_phase.nii', subj_id),...
-                              'phase_encode', -1, ... % It's -1 (A>>P) or 1 (P>>A) and can be found in imaging sequence specifications
-                              'et1', et1, ...
-                              'et2', et2, ...
-                              'tert', tert, ...
-                              'func_dir',fullfile(baseDir, imagingRawDir, subj_id),...
-                              'epi_files', epi_list);
-        
-        case 'FUNC:append_sbref_to_epi'
-            % put sbref as the first volume of the epi images for
-            % realignment. Note that the rtm option must be set 0 so that
-            % spm_realign(), realigns to the first volume. 
-
-            for run = runs
-                epi_file = fullfile(baseDir, imagingRawDir, subj_id, sprintf('%s_run_%.2d.nii',subj_id,run));
-                sbref_file = fullfile(baseDir, imagingRawDir, subj_id, sprintf('%s_run_%.2d_sbref.nii',subj_id,run));
-                
-                % Load the NIfTI header and image data
-                V = spm_vol(epi_file); % Get volume headers
-                Y = spm_read_vols(V);   % Load image data (4D array)
-                
-                % Load the new volume to add (must match the existing volume size)
-                V_sbref = spm_vol(sbref_file);
-                Y_sbref = spm_read_vols(V_sbref);
-                
-                % Prepend the new volume (add it at the beginning)
-                Y_updated = cat(4, Y_sbref, Y);
-                
-                % Create new NIfTI headers for the updated file
-                V_new = repmat(V(1), size(Y_updated, 4), 1); % Copy metadata
-                for i = 1:length(V_new)
-                    V_new(i).fname = epi_file; % New filename
-                    V_new(i).n = [i,1]; % Update volume index
-                end
-                
-                % Save the updated NIfTI file
-                for i = 1:num_vols
-                    spm_write_vol(V_new(i), Y_updated(:,:,:,i));
-                end
-
-            end
-
         case 'FUNC:realign_unwarp'      
             % Do spm_realign_unwarp
 
