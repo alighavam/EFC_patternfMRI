@@ -1,4 +1,4 @@
-function varargout = efcp_functional_singlesess(what, varargin)
+function varargout = efcp_imana(what, varargin)
     % Use a different baseDir when using your local machine or the cbs
     % server. Add more directory if needed. Use single quotes ' and not
     % double quotes " because some spm function raise error with double
@@ -16,7 +16,7 @@ function varargout = efcp_functional_singlesess(what, varargin)
     imagingRawDir = 'imaging_data_raw'; % Temporary directory for raw functional data
     imagingDir = 'imaging_data'; % Preprocesses functional data
     fmapDir = 'fieldmaps'; % Fieldmap dir after moving from BIDS and SPM make fieldmap
-
+    
     pinfo = dload(fullfile(baseDir,'participants.tsv'));
 
     % handling input args:
@@ -29,13 +29,16 @@ function varargout = efcp_functional_singlesess(what, varargin)
     end
 
     % get participant row from participant.tsv
-    subj_row = getrow(pinfo, pinfo.sn == sn);
+    participant_row = getrow(pinfo, pinfo.sn == sn);
     
-    % get subj_id
-    subj_id = subj_row.participant_id{1};
+    % get participant id:
+    participant_id = participant_row.participant_id{1};
 
-    % get runs (FuncRuns column needs to be in participants.tsv)    
-    runs = spmj_dotstr2array(subj_row.FuncRuns{1});
+    % get BIDS session names:
+    for i = 1:participant_row.num_ses
+        % removes extra double quotations from the name:
+        ses{i} = erase(participant_row.(sprintf('name_ses%d',i)){1}, '"');
+    end
     
     switch(what)
         case 'BIDS:move_unzip_raw_func'
@@ -44,45 +47,38 @@ function varargout = efcp_functional_singlesess(what, varargin)
             % nRuns Nifti files named <subj_id>_run_XX.nii in the 
             % <project_id>/imaging_data_raw/<subj_id>/ directory.
             
-            % loop on runs of sess:
-            for run = runs
-                % pull functional raw name from the participant.tsv:
-                FuncRawName_tmp = [pinfo.FuncRawName{pinfo.sn==sn} '.nii.gz'];
-                sbref_raw_name = [pinfo.sbref_name{pinfo.sn==sn} '.nii.gz'];
-
-                % add run number to the name of the file:
-                FuncRawName_tmp = replace(FuncRawName_tmp,'XX',sprintf('%.02d',run));
-                sbref_raw_name = replace(sbref_raw_name,'XX',sprintf('%.02d',run));
-
-                % path to the subj func data:
-                func_raw_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',FuncRawName_tmp);
-                sbref_path = fullfile(baseDir,bidsDir,sprintf('sub-%s',subj_id),'func',sbref_raw_name);
+            for i = 1:length(ses)
+                runs = spmj_dotstr2array(participant_row.(sprintf('run_ses%d',i)){1});
+                func_tmp_name = sprintf('%s.nii.gz', participant_row.(sprintf('func_name_ses%d',i)){1});
                 
-                % destination path:
-                output_folder = fullfile(baseDir,imagingRawDir,subj_id);
-                output_file = fullfile(output_folder,[subj_id sprintf('_run_%.02d.nii.gz',run)]);
-                sbref_output_file = fullfile(output_folder,[subj_id sprintf('_run_%.02d_sbref.nii.gz',run)]);
+                % loop on runs of sess:
+                for run = runs
+                    % add run number to the name of the functional file:
+                    func_name = replace(func_tmp_name,'XX',sprintf('%.02d',run));
+                    
+                    % path to the subj func file:
+                    func_file = fullfile(baseDir,bidsDir,sprintf('sub-%s',participant_id),sprintf('ses-%s',ses{i}),'func',func_name);
+                    
+                    % destination path:
+                    output_folder = fullfile(baseDir,imagingRawDir,participant_id,sprintf('ses-%s',ses{i}));
+                    output_file = fullfile(output_folder,[participant_id sprintf('_run_%.02d.nii.gz',run)]);
+                    
+                    if ~exist(output_folder,"dir")
+                        mkdir(output_folder);
+                    end
+                    
+                    % copy file to destination:
+                    [status,msg] = copyfile(func_file,output_file);
+                    if ~status  
+                        error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
+                    end
+                    
+                    % unzip the .gz files to make usable for SPM:
+                    gunzip(output_file);
 
-                if ~exist(output_folder,"dir")
-                    mkdir(output_folder);
+                    % delete the compressed file:
+                    delete(output_file);
                 end
-                
-                % copy file to destination:
-                [status,msg] = copyfile(func_raw_path,output_file);
-                if ~status  
-                    error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
-                end
-                
-                % copy sbref to destination:
-                [status,msg] = copyfile(sbref_path,sbref_output_file);
-                
-                % unzip the .gz files to make usable for SPM:
-                gunzip(output_file);
-                gunzip(sbref_output_file);
-                
-                % delete the compressed file:
-                delete(output_file);
-                delete(sbref_output_file);
             end
     
         case 'BIDS:move_unzip_raw_fmap'
@@ -97,6 +93,40 @@ function varargout = efcp_functional_singlesess(what, varargin)
             % the nasal cavities or sinuses). This phase information can be
             % used to compute a fieldmap, which is essential for correcting
             % geometric distortions (unwarping) in other MRI sequences.
+
+            for i = 1:length(ses)
+                runs = spmj_dotstr2array(participant_row.(sprintf('run_ses%d',i)){1});
+                fmap_ = sprintf('%s.nii.gz', participant_row.(sprintf('func_name_ses%d',i)){1});
+                
+                % loop on runs of sess:
+                for run = runs
+                    % add run number to the name of the functional file:
+                    func_name = replace(func_tmp_name,'XX',sprintf('%.02d',run));
+                    
+                    % path to the subj func file:
+                    func_file = fullfile(baseDir,bidsDir,sprintf('sub-%s',participant_id),sprintf('ses-%s',ses{i}),'func',func_name);
+                    
+                    % destination path:
+                    output_folder = fullfile(baseDir,imagingRawDir,participant_id,sprintf('ses-%s',ses{i}));
+                    output_file = fullfile(output_folder,[participant_id sprintf('_run_%.02d.nii.gz',run)]);
+                    
+                    if ~exist(output_folder,"dir")
+                        mkdir(output_folder);
+                    end
+                    
+                    % copy file to destination:
+                    [status,msg] = copyfile(func_file,output_file);
+                    if ~status  
+                        error('FUNC:move_unzip_raw_func -> subj %d raw functional (BOLD) was not moved from BIDS to the destenation:\n%s',sn,msg)
+                    end
+                    
+                    % unzip the .gz files to make usable for SPM:
+                    gunzip(output_file);
+
+                    % delete the compressed file:
+                    delete(output_file);
+                end
+            end
             
             % pull fmap raw names from the participant.tsv:
             fmapMagnitudeName_tmp = pinfo.fmapMagnitudeName{pinfo.sn==sn};
