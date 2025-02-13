@@ -186,8 +186,6 @@ function varargout = efcp_imana(what, varargin)
                 fmap_path = fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}));
                 
                 epi_files = dir(fullfile(epi_path, '*.nii'));
-                fmap_magnitude = fullfile(fmap_path, [participant_id '_magnitude.nii']);
-                fmap_phaes = fullfile(fmap_path, [participant_id '_phase.nii']);
                 
                 % params:
                 et1 = 0.00408*1000;
@@ -201,13 +199,34 @@ function varargout = efcp_imana(what, varargin)
                                   'et1', et1, ...
                                   'et2', et2, ...
                                   'tert', tert, ...
-                                  'func_dir',fullfile(baseDir, imagingRawDir, participant_id),...
+                                  'func_dir',fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i})),...
                                   'epi_files', {epi_files.name});
             end
-            
+        
+        case 'FMAP:make_single_session'
+            % move the generated epi fmaps to the main directory of
+            % fieldmaps and change their names to single session format
+            % run_01 to run_16.
+            cnt = 1;
+            for i = 1:length(ses)
+                files = dir(fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}), 'vdm*_run_*.nii'));
+                file_paths = {files.folder};
+                file_names = {files.name};
+                output_dir = fullfile(baseDir, fmapDir, participant_id);
+
+                for run = 1:length(file_names)
+                    source_file = fullfile(file_paths{run}, file_names{run});
+                    out_file = fullfile(output_dir, sprintf('vdm5_sc%s_phase_run_%.2d.nii', participant_id, cnt));
+
+                    movefile(source_file, out_file);
+                    fprintf('Moved and renamed: %s -> %s\n', file_names{run}, sprintf('vdm5_sc%s_phase_run_%.2d.nii', participant_id, cnt));
+                    cnt = cnt+1;
+                end
+            end
+
         case 'FUNC:realign_unwarp'      
             % Do spm_realign_unwarp
-
+            
             run_list = {}; % Initialize as an empty cell array
             for run = runs
                 run_list{end+1} = sprintf('run_%02d', run);
