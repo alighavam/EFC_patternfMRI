@@ -333,7 +333,7 @@ function varargout = efcp_imana(what, varargin)
             % addition, this step generates five tissue probability maps
             % (c1-5) for grey matter, white matter, csf, bone and soft
             % tissue.
-            mean_epi_files = dir(fullfile(baseDir, imagingRawDir, participant_id, '*mean*.nii'));
+            mean_epi_files = dir(fullfile(baseDir, imagingDir, participant_id, '*mean*.nii'));
             P{1} = fullfile(mean_epi_files(1).folder, mean_epi_files(1).name);
             spmj_bias_correct(P);
         
