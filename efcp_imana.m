@@ -207,7 +207,7 @@ function varargout = efcp_imana(what, varargin)
             % fieldmaps and change their names to single session format
             % run_01 to run_16.
             
-            % move fmaps:
+            % move fmaps to single sess format:
             cnt = 1;
             for i = 1:length(ses)
                 files = dir(fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}), 'vdm*_run_*.nii'));
@@ -225,7 +225,7 @@ function varargout = efcp_imana(what, varargin)
                 end
             end
             
-            % move epi:
+            % move epi to single sess format:
             cnt = 1;
             for i = 1:length(ses)
                 files = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
