@@ -294,9 +294,11 @@ function varargout = efcp_imana(what, varargin)
             % addition, this step generates five tissue probability maps
             % (c1-5) for grey matter, white matter, csf, bone and soft
             % tissue.
-            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, 'mean*.nii'));
-            P{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
-            spmj_bias_correct(P);
+            for i = 1:length(ses)
+                mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), 'mean*.nii'));
+                P{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
+                spmj_bias_correct(P);
+            end
             
         case 'FUNC:coreg'                                                      
             % coregister rbumean image to anatomical image for each session
@@ -320,20 +322,19 @@ function varargout = efcp_imana(what, varargin)
             %   compatible with SPM.
             
             % (2) Run automated co-registration to register bias-corrected meanimage to anatomical image
-            if rtm==0   % if registered to first volume
-                mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, ['bmean' prefix, participant_id '_run_*.nii']));
-            else    % if registered to the mean image
-                mean_epi = sprintf('rb%smeanepi_%s.nii', prefix, subj_id);
+            for i = 1:length(ses)
+                mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), ['bmean' prefix, participant_id '_run_*.nii']));
+                
+                J.source = {fullfile(mean_epi(1).folder, mean_epi(1).name)}; 
+                J.ref = {fullfile(baseDir, anatomicalDir, participant_id, [participant_id, '_T1w','.nii'])};
+                J.other = {''};
+                J.eoptions.cost_fun = 'nmi';
+                J.eoptions.sep = [4 2];
+                J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+                J.eoptions.fwhm = [7 7];
+                matlabbatch{1}.spm.spatial.coreg.estimate=J;
+                spm_jobman('run',matlabbatch);
             end
-            J.source = {fullfile(mean_epi(1).folder, mean_epi(1).name)}; 
-            J.ref = {fullfile(baseDir,anatomicalDir,participant_id,[participant_id, '_T1w','.nii'])};
-            J.other = {''};
-            J.eoptions.cost_fun = 'nmi';
-            J.eoptions.sep = [4 2];
-            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
-            J.eoptions.fwhm = [7 7];
-            matlabbatch{1}.spm.spatial.coreg.estimate=J;
-            spm_jobman('run',matlabbatch);
                 
         case 'FUNC:make_samealign'
             % align to registered bias corrected mean image of each session
