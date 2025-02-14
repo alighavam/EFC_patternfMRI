@@ -297,7 +297,7 @@ function varargout = efcp_imana(what, varargin)
                 
                 % realign parameters names:
                 source = fullfile(rp_files(run).folder, rp_files(run).name);
-                dest = fullfile(des_dir, rp_files(run).name);
+                dest = fullfile(dest_dir, rp_files(run).name);
                 % move to destination:
                 [status,msg] = copyfile(source,dest);
                 if ~status  
