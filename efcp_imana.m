@@ -6,7 +6,7 @@ function varargout = efcp_imana(what, varargin)
     if ismac
         baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
     elseif isunix
-        disp('Running on Linux (Ubuntu or another Unix-based system)');
+        baseDir = '/cifs/diedrichsen/data/Chord_exp/EFC_patternfMRI';
     else
         disp('Running on Windows or another OS');
     end
@@ -183,9 +183,8 @@ function varargout = efcp_imana(what, varargin)
             
             for i = 1:length(ses)
                 epi_path = fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}));
-                fmap_path = fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}));
                 
-                epi_files = dir(fullfile(epi_path, '*.nii'));
+                epi_files = dir(fullfile(epi_path, [participant_id '_run_*.nii']));
                 
                 % params:
                 et1 = 0.00408*1000;
@@ -203,10 +202,12 @@ function varargout = efcp_imana(what, varargin)
                                   'epi_files', {epi_files.name});
             end
         
-        case 'FMAP:make_single_session'
+        case 'FUNC:make_single_session'
             % move the generated epi fmaps to the main directory of
             % fieldmaps and change their names to single session format
             % run_01 to run_16.
+            
+            % move fmaps:
             cnt = 1;
             for i = 1:length(ses)
                 files = dir(fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}), 'vdm*_run_*.nii'));
@@ -223,16 +224,35 @@ function varargout = efcp_imana(what, varargin)
                     cnt = cnt+1;
                 end
             end
+            
+            % move epi:
+            cnt = 1;
+            for i = 1:length(ses)
+                files = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
+                file_paths = {files.folder};
+                file_names = {files.name};
+                output_dir = fullfile(baseDir, imagingRawDir, participant_id);
+
+                for run = 1:length(file_names)
+                    source_file = fullfile(file_paths{run}, file_names{run});
+                    out_file = fullfile(output_dir, sprintf('%s_run_%.2d.nii', participant_id, cnt));
+
+                    movefile(source_file, out_file);
+                    fprintf('Moved and renamed: %s -> %s\n', file_names{run}, sprintf('%s_run_%.2d.nii', participant_id, cnt));
+                    cnt = cnt+1;
+                end
+            end
 
         case 'FUNC:realign_unwarp'      
             % Do spm_realign_unwarp
             
+            epi_runs = dir(fullfile(baseDir, imagingRawDir, participant_id, [participant_id '_run_*.nii']));
             run_list = {}; % Initialize as an empty cell array
-            for run = runs
+            for run = 1:length(epi_runs)
                 run_list{end+1} = sprintf('run_%02d', run);
             end
 
-            spmj_realign_unwarp(subj_id, ...
+            spmj_realign_unwarp(participant_id, ...
                  run_list, ...
                 'rawdata_dir',fullfile(baseDir,imagingRawDir),...
                 'fmap_dir',fullfile(baseDir,fmapDir),...
