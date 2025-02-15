@@ -346,7 +346,7 @@ function varargout = efcp_imana(what, varargin)
             % anatomical. The reason that it works is: 1) in the
             % realignment (+unwarping) process, we have registered every
             % single volume of every single run to the first volume of the
-            % first run of the session. 2) In the same step, for each
+            % first run of the session (rtm=0). 2) In the same step, for each
             % session, a mean functional image (meanepi*.nii or meanu*.nii
             % based on the rtm option) was generated. This mean image is
             % alread in the space of all the functional volumes. Later we
@@ -366,7 +366,7 @@ function varargout = efcp_imana(what, varargin)
             else
                 P{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
             end
-
+            
             % select images to be realigned:
             Q = {};
             for r = 1:length(run_list)
@@ -374,9 +374,8 @@ function varargout = efcp_imana(what, varargin)
                      Q{end+1} = fullfile(baseDir,imagingDir,subj_id,sprintf('%s_%s.nii,%d', subj_id, run_list{r}, i));
                 end
             end
-
+            
             spmj_makesamealign_nifti(char(P),char(Q));
-            % end
         
         case 'FUNC:make_maskImage'       
             % Make mask images (noskull and gray_only) for 1st level glm
