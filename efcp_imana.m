@@ -222,12 +222,14 @@ function varargout = efcp_imana(what, varargin)
             % looks for motion correction logs into imaging_data, needs to
             % be run after realigned images are moved there from
             % imaging_data_raw
-            rp_files = dir(fullfile(baseDir, imagingRawDir, participant_id, ['rp_' participant_id '_run_*.txt']));
-            rp_list = {}; % Initialize as an empty cell array
-            for run = 1:length(rp_files)
-                rp_list{end+1} = fullfile(rp_files(run).folder, rp_files(run).name);
+            for i = 1:length(ses)
+                rp_files = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}), ['rp_' participant_id '_run_*.txt']));
+                rp_list = {}; % Initialize as an empty cell array
+                for run = 1:length(rp_files)
+                    rp_list{end+1} = fullfile(rp_files(run).folder, rp_files(run).name);
+                end
+                smpj_plot_mov_corr(rp_list)
             end
-            smpj_plot_mov_corr(rp_list)
 
         case 'FUNC:move_realigned_images'          
             for i = 1:length(ses)
