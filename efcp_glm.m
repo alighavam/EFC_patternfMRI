@@ -188,7 +188,7 @@ function varargout = efcp_glm(what, varargin)
             % D = dload(fullfile(baseDir,behavDir,subj_id, sprintf('smp2_%d.dat', sn)));
             events_file = sprintf('glm%d_events.tsv', glm);
             
-            Dd = dload(fullfile(baseDir,behavDir, ses_id, participant_id, events_file));
+            Dd = dload(fullfile(baseDir,behavDir, participant_id, ses_id, events_file));
             
             regressors = unique(Dd.eventtype);
             nRegr = length(regressors);
@@ -329,7 +329,7 @@ function varargout = efcp_glm(what, varargin)
 
                 % Create map where non-sphericity correction must be
                 % applied
-                J.cvi_mask = {fullfile(baseDir, anatomicalDir, participant_id,  sprintf('rmask_gray_ses-%.2d.nii',ses)};
+                J.cvi_mask = {fullfile(baseDir, anatomicalDir, participant_id,  sprintf('rmask_gray_ses-%.2d.nii',ses))};
 
                 % Method for non sphericity correction
                 J.cvi =  'fast';
@@ -460,27 +460,24 @@ function varargout = efcp_glm(what, varargin)
          
             % Check for and delete existing SPM.mat file
             % spm_file = fullfile(baseDir, [glmEstDir num2str(glm)], ['subj' num2str(sn)], 'SPM.mat');
-            spm_file = fullfile(baseDir, [glmEstDir num2str(glm)], ['subj' num2str(sn)], 'SPM.mat');
+            spm_file = fullfile(baseDir, [glmEstDir num2str(glm)], participant_id, ses_id, 'SPM.mat');
             if exist(spm_file, 'file')
                 delete(spm_file);
             end
 
-            efcl_glm('GLM:make_event', 'sn', sn, 'glm', glm, 'day', day)
-            efcl_glm('GLM:design', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'day', day, 'derivs', derivs)
-            efcl_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'day', day)
-            efcl_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'day', day)
-            efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'day', day)
+            efcp_glm('GLM:make_event', 'sn', sn, 'glm', glm, 'ses', ses)
+            efcp_glm('GLM:design', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses, 'derivs', derivs)
+            efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
+            efcp_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'ses', ses)
+            efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
 %             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'beta')
 %             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'res')
 %             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'con')
-             efcl_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'day', day)
+            efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
             
        case 'SURF:vol2surf'
-            
             currentDir = pwd;
-
-            res  = 32;          % resolution of the atlas. options are: 32, 164
-
+            
             glmEstDir = [glmEstDir num2str(glm)];
             
             V = {};
