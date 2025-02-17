@@ -54,7 +54,7 @@ function varargout = efcp_glm(what, varargin)
     % get subj_id
     participant_id = subj_row.participant_id{1};
     
-    % get day_id
+    % get ses_id
     ses_id = sprintf('ses-%.2d', ses);
 
     % get runs (FuncRuns column needs to be in participants.tsv)    
@@ -366,7 +366,7 @@ function varargout = efcp_glm(what, varargin)
             
             currentDir = pwd;
             
-       case 'GLM:estimate'      % estimate beta values
+        case 'GLM:estimate'      % estimate beta values
 
             currentDir = pwd;
 
@@ -391,7 +391,7 @@ function varargout = efcp_glm(what, varargin)
 
             cd(currentDir)
             
-       case 'GLM:T_contrasts'
+        case 'GLM:T_contrasts'
             
             currentDir = pwd;
 
@@ -454,7 +454,7 @@ function varargout = efcp_glm(what, varargin)
 
             cd(currentDir)
             
-       case 'GLM:all'
+        case 'GLM:all'
             
             spm_get_defaults('cmdline', true);  % Suppress GUI prompts, no request for overwirte
          
@@ -475,7 +475,7 @@ function varargout = efcp_glm(what, varargin)
 %             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'con')
             efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
             
-       case 'SURF:vol2surf'
+        case 'SURF:vol2surf'
             currentDir = pwd;
             
             glmEstDir = [glmEstDir num2str(glm)];
@@ -484,15 +484,15 @@ function varargout = efcp_glm(what, varargin)
             cols = {};
             if strcmp(type, 'spmT')
 %                 filename = ['spmT_' id '.func.gii'];
-                files = dir(fullfile(baseDir, glmEstDir, day_id, subj_id, 'spmT_*.nii'));
+                files = dir(fullfile(baseDir, glmEstDir, participant_id, ses_id, 'spmT_*.nii'));
                 for f = 1:length(files)
                     fprintf([files(f).name '\n'])
                     V{f} = fullfile(files(f).folder, files(f).name);
                     cols{f} = files(f).name;
                 end
             elseif strcmp(type, 'beta')
-                SPM = load(fullfile(baseDir, glmEstDir, day_id,subj_id, 'SPM.mat')); SPM=SPM.SPM;
-                files = dir(fullfile(baseDir, glmEstDir, day_id,subj_id, 'beta_*.nii'));
+                SPM = load(fullfile(baseDir, glmEstDir, participant_id, 'SPM.mat')); SPM=SPM.SPM;
+                files = dir(fullfile(baseDir, glmEstDir, participant_id, ses_id, 'beta_*.nii'));
                 files = files(SPM.xX.iC);
                 for f = 1:length(files)
                     fprintf([files(f).name '\n'])
@@ -500,28 +500,28 @@ function varargout = efcp_glm(what, varargin)
                     cols{f} = files(f).name;
                 end
             elseif strcmp(type, 'psc')
-                files = dir(fullfile(baseDir, glmEstDir, day_id,subj_id, 'psc_*.nii'));
+                files = dir(fullfile(baseDir, glmEstDir, participant_id, ses_id, 'psc_*.nii'));
                 for f = 1:length(files)
                     fprintf([files(f).name '\n'])
                     V{f} = fullfile(files(f).folder, files(f).name);
                     cols{f} = files(f).name;
                 end
             elseif strcmp(type, 'con')
-                files = dir(fullfile(baseDir, glmEstDir, day_id,subj_id, 'con_*.nii'));
+                files = dir(fullfile(baseDir, glmEstDir, participant_id, ses_id, 'con_*.nii'));
                 for f = 1:length(files)
                     fprintf([files(f).name '\n'])
                     V{f} = fullfile(files(f).folder, files(f).name);
                     cols{f} = files(f).name;
                 end
             elseif strcmp(type, 'res')
-                V{1} = fullfile(baseDir, glmEstDir,day_id, subj_id, 'ResMS.nii');
+                V{1} = fullfile(baseDir, glmEstDir, participant_id, ses_id, 'ResMS.nii');
                 cols{1} = 'ResMS';
             end
 
-            hemLpial = fullfile(baseDir, wbDir, subj_id,  [subj_id '.L.pial.32k.surf.gii']);
-            hemRpial = fullfile(baseDir, wbDir, subj_id, [subj_id '.R.pial.32k.surf.gii']);
-            hemLwhite = fullfile(baseDir, wbDir, subj_id, [subj_id '.L.white.32k.surf.gii']);
-            hemRwhite = fullfile(baseDir, wbDir, subj_id, [subj_id '.R.white.32k.surf.gii']);
+            hemLpial = fullfile(baseDir, wbDir, participant_id,  [participant_id '.L.pial.32k.surf.gii']);
+            hemRpial = fullfile(baseDir, wbDir, participant_id, [participant_id '.R.pial.32k.surf.gii']);
+            hemLwhite = fullfile(baseDir, wbDir, participant_id, [participant_id '.L.white.32k.surf.gii']);
+            hemRwhite = fullfile(baseDir, wbDir, participant_id, [participant_id '.R.white.32k.surf.gii']);
             
             hemLpial = gifti(hemLpial);
             hemRpial = gifti(hemRpial);
@@ -536,12 +536,12 @@ function varargout = efcp_glm(what, varargin)
             GL = surf_vol2surf(c1L,c2L,V,'anatomicalStruct','CortexLeft', 'exclude_thres', 0.9, 'faces', hemLpial.faces);
             GL = surf_makeFuncGifti(GL.cdata,'anatomicalStruct', 'CortexLeft', 'columnNames', cols);
     
-            save(GL, fullfile(baseDir, wbDir, subj_id, [glmEstDir '.' day_id '.'  type '.L.func.gii']))
+            save(GL, fullfile(baseDir, wbDir, participant_id, [glmEstDir '.' ses_id '.'  type '.L.func.gii']))
     
             GR = surf_vol2surf(c1R,c2R,V,'anatomicalStruct','CortexRight', 'exclude_thres', 0.9, 'faces', hemRpial.faces);
             GR = surf_makeFuncGifti(GR.cdata,'anatomicalStruct', 'CortexRight', 'columnNames', cols);
 
-            save(GR, fullfile(baseDir, wbDir, subj_id, [glmEstDir '.' day_id '.' type '.R.func.gii']))
+            save(GR, fullfile(baseDir, wbDir, participant_id, [glmEstDir '.' ses_id '.' type '.R.func.gii']))
             
             cd(currentDir)
             
@@ -549,16 +549,16 @@ function varargout = efcp_glm(what, varargin)
             
             currentDir = pwd;
             
-            glmDir = fullfile(baseDir, [glmEstDir num2str(glm)], day_id);
+            glmDir = fullfile(baseDir, [glmEstDir num2str(glm)]);
             T=[];
             
             pre = 6;
             post = 12;            
 
-            fprintf('%s\n',subj_id);
+            fprintf('%s\n', participant_id);
 
             % load SPM.mat
-            cd(fullfile(glmDir,subj_id));
+            cd(fullfile(glmDir, participant_id, ses_id));
             SPM = load('SPM.mat'); SPM=SPM.SPM;
             
             TR = SPM.xY.RT;
@@ -581,13 +581,14 @@ function varargout = efcp_glm(what, varargin)
             % end
             
             % load ROI definition (R)
-            R = load(fullfile(baseDir, regDir,day_id,subj_id,[subj_id '_' atlas '_region.mat'])); R=R.R;
+            R = load(fullfile(baseDir, regDir, participant_id, ses_id, [participant_id '_' atlas '_region.mat'])); R=R.R;
             
             % extract time series data
             [y_raw, y_adj, y_hat, y_res,B] = region_getts(SPM,R);
             
 %             D = spmj_get_ons_struct(SPM);
-            Dd = dload(fullfile(baseDir, behavDir, day_id, subj_id, sprintf('efc4_%d.dat', sn)));
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            Dd = dload(fullfile(dat_file.folder, dat_file.name));
             
             idx = ismember(Dd.BN, runs);
             
@@ -618,12 +619,11 @@ function varargout = efcp_glm(what, varargin)
                 T           = addstruct(T,D);
             end
             
-            save(fullfile(baseDir,regDir, day_id, subj_id, sprintf('hrf_glm%d.mat', glm)),'T'); 
+            save(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('hrf_glm%d.mat', glm)),'T'); 
             varargout{1} = T;
             varargout{2} = y_adj;
             
             cd(currentDir)
-            
     end
 
 end
