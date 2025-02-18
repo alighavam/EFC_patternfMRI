@@ -1,0 +1,13 @@
+pytest>=3.9
+pytest-cov
+coverage
+joblib
+pandas
+matplotlib
+nibabel
+numpy
+cython
+requests
+scipy>=1.9.0
+plotly
+neuroimagingtools>=1.1.1

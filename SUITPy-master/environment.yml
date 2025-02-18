@@ -1,0 +1,15 @@
+name: test-env
+channels:
+    - conda-forge
+dependencies:
+    - pip
+    - numpy
+    - scipy
+    - matplotlib
+    - nibabel
+    - joblib
+    - pytest
+    - pytest-cov
+    - lxml
+    - codecov
+    - plotly
