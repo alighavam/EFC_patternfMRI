@@ -354,73 +354,79 @@ function varargout = efcp_imana(what, varargin)
             % we change the transformation matrices of all the functional
             % volumes to the transform matrix of the coregistered image,
             % they will all tranform into the anatomical coordinates space.
-
-            run_list = {}; % Initialize as an empty cell array
-            for run = runs
-                run_list{end+1} = sprintf('run_%02d', run);
-            end
             
-            % select the reference image:
-            if rtm==0
-                P{1} = fullfile(baseDir,imagingDir,subj_id, sprintf('bmean%s%s_%s.nii', prefix, subj_id, run_list{1}));
-            else
-                P{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
-            end
-            
-            % select images to be realigned:
-            Q = {};
-            for r = 1:length(run_list)
-                for i = 1:pinfo.numTR
-                     Q{end+1} = fullfile(baseDir,imagingDir,subj_id,sprintf('%s_%s.nii,%d', subj_id, run_list{r}, i));
+            for i = 1:length(ses)
+                epi_files = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
+                epi_list = {}; % Initialize as an empty cell array
+                for run = 1:length(epi_files)
+                    epi_list{end+1} = fullfile(epi_files(run).folder, epi_files(run).name);
                 end
+                
+                % select the reference image:
+                if rtm==0
+                    mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), ['bmean' prefix participant_id '_run_*.nii']));
+                    P{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
+                else
+                    P{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
+                end
+                
+                % select images to be realigned:
+                Q = {};
+                for r = 1:length(epi_list)
+                    for j = 1:pinfo.numTR
+                        Q{end+1} = fullfile(sprintf('%s,%d', epi_list{r}, j));
+                    end
+                end
+                
+                spmj_makesamealign_nifti(char(P),char(Q));
             end
-            
-            spmj_makesamealign_nifti(char(P),char(Q));
         
         case 'FUNC:make_maskImage'       
             % Make mask images (noskull and gray_only) for 1st level glm
-
-            run_list = {}; % Initialize as an empty cell array
-            for run = runs
-                run_list{end+1} = sprintf('run_%02d', run);
+            for i = 1:length(ses)
+                epi_files = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
+                epi_list = {}; % Initialize as an empty cell array
+                for run = 1:length(epi_files)
+                    epi_list{end+1} = fullfile(epi_files(run).folder, epi_files(run).name);
+                end
+                
+                % bias corrected mean epi image:
+                if rtm==0
+                    mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), ['bmean' prefix participant_id '_run_*.nii']));
+                    nam{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
+                else
+                    nam{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
+                end
+                nam{2} = fullfile(baseDir, anatomicalDir, participant_id, ['c1', participant_id, '_T1w','.nii']);
+                nam{3} = fullfile(baseDir, anatomicalDir, participant_id, ['c2', participant_id, '_T1w','.nii']);
+                nam{4} = fullfile(baseDir, anatomicalDir, participant_id, ['c3', participant_id, '_T1w','.nii']);
+                spm_imcalc(nam, fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), 'rmask_noskull.nii'), 'i1>1 & (i2+i3+i4)>0.2')
+                
+                source = fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), 'rmask_noskull.nii');
+                dest = fullfile(baseDir, anatomicalDir, participant_id, sprintf('rmask_noskull_ses-%s.nii',ses{i}));
+                movefile(source, dest);
+                
+                % gray matter mask for covariance estimation
+                % ------------------------------------------
+                nam={};
+                % nam{1}  = fullfile(imagingDir,subj_id{sn}, 'sess1', ['rb' prefix 'meanepi_' subj_id{sn} '.nii']);
+    
+                % IS THIS CHANGE CORRECT??
+                % nam{1}  = fullfile(baseDir,imagingDir,char(pinfo.subj_id(pinfo.sn==sn)),sprintf('sess%d',sess), ['rb' prefix 'meanepi_' char(pinfo.subj_id(pinfo.sn==sn)) '.nii']);
+                % bias corrected mean epi image:
+                if rtm==0
+                    mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), ['bmean' prefix participant_id '_run_*.nii']));
+                    nam{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
+                else
+                    nam{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
+                end
+                nam{2} = fullfile(baseDir, anatomicalDir, participant_id, ['c1', participant_id, '_T1w','.nii']);
+                spm_imcalc(nam, fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), 'rmask_gray.nii'), 'i1>1 & i2>0.4')
+                
+                source = fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), 'rmask_gray.nii');
+                dest = fullfile(baseDir, anatomicalDir, participant_id, sprintf('rmask_gray_ses-%s.nii',ses{i}));
+                movefile(source,dest);
             end
-        
-            % bias corrected mean epi image:
-            if rtm==0
-                nam{1} = fullfile(baseDir,imagingDir,subj_id,sprintf('bmean%s%s_%s.nii', prefix, subj_id, run_list{1}));
-            else
-                nam{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
-            end
-            nam{2}  = fullfile(baseDir,anatomicalDir,subj_id,['c1',subj_id, '_anatomical','.nii']);
-            nam{3}  = fullfile(baseDir,anatomicalDir,subj_id,['c2',subj_id, '_anatomical','.nii']);
-            nam{4}  = fullfile(baseDir,anatomicalDir,subj_id,['c3',subj_id, '_anatomical','.nii']);
-            spm_imcalc(nam, fullfile(baseDir,imagingDir,subj_id, 'rmask_noskull.nii'), 'i1>1 & (i2+i3+i4)>0.2')
-            
-            source = fullfile(baseDir,imagingDir,subj_id, 'rmask_noskull.nii'); % does this need to have some flag for session?
-            dest = fullfile(baseDir,anatomicalDir,subj_id,'rmask_noskull.nii');
-            movefile(source,dest);
-            
-            % gray matter mask for covariance estimation
-            % ------------------------------------------
-            nam={};
-            % nam{1}  = fullfile(imagingDir,subj_id{sn}, 'sess1', ['rb' prefix 'meanepi_' subj_id{sn} '.nii']);
-
-            % IS THIS CHANGE CORRECT??
-            % nam{1}  = fullfile(baseDir,imagingDir,char(pinfo.subj_id(pinfo.sn==sn)),sprintf('sess%d',sess), ['rb' prefix 'meanepi_' char(pinfo.subj_id(pinfo.sn==sn)) '.nii']);
-            % bias corrected mean epi image:
-            if rtm==0
-                nam{1} = fullfile(baseDir,imagingDir,subj_id,sprintf('bmean%s%s_%s.nii', prefix, subj_id, run_list{1}));
-            else
-                nam{1} = fullfile(baseDir,imagingDir,subj_id,['rb' prefix 'meanepi_' subj_id '.nii']);
-            end
-
-            nam{2}  = fullfile(baseDir,anatomicalDir,subj_id,['c1',subj_id, '_anatomical','.nii']);
-            spm_imcalc(nam, fullfile(baseDir,imagingDir,subj_id, 'rmask_gray.nii'), 'i1>1 & i2>0.4')
-            
-            source = fullfile(baseDir,imagingDir,subj_id, 'rmask_gray.nii');
-            dest = fullfile(baseDir,anatomicalDir,subj_id,'rmask_gray.nii');
-            movefile(source,dest);
-            
     
     end 
 
