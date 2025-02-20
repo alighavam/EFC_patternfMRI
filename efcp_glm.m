@@ -394,7 +394,7 @@ function varargout = efcp_glm(what, varargin)
         case 'GLM:T_contrasts'
             
             currentDir = pwd;
-
+            
             replace_xCon   = true;
 
             if isempty(sn)
@@ -421,7 +421,6 @@ function varargout = efcp_glm(what, varargin)
             contrasts = unique(T.name);
             
             for c = 1:length(contrasts)
- 
                 contrast_name = contrasts{c};
                 xcon = zeros(size(SPM.xX.X,2), 1);
                 xcon(strcmp(T.name, contrast_name)) = 1;
