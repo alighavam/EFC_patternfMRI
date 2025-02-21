@@ -56,7 +56,7 @@ function varargout = efcp_glm(what, varargin)
     
     % get ses_id
     ses_id = sprintf('ses-%.2d', ses);
-
+    
     % get runs (FuncRuns column needs to be in participants.tsv)    
     runs = spmj_dotstr2array(subj_row.(sprintf('run_ses%d',ses)){1});
     switch what
@@ -552,9 +552,9 @@ function varargout = efcp_glm(what, varargin)
             T=[];
             
             pre = 6;
-            post = 12;            
+            post = 15;
 
-            fprintf('%s\n', participant_id);
+            fprintf('Extracting region time series for participant s%s...\n', participant_id);
 
             % load SPM.mat
             cd(fullfile(glmDir, participant_id, ses_id));
@@ -580,7 +580,7 @@ function varargout = efcp_glm(what, varargin)
             % end
             
             % load ROI definition (R)
-            R = load(fullfile(baseDir, regDir, participant_id, ses_id, [participant_id '_' atlas '_region.mat'])); R=R.R;
+            R = load(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('%s_%s_glm%d_region.mat', participant_id, atlas, glm))); R=R.R;
             
             % extract time series data
             [y_raw, y_adj, y_hat, y_res,B] = region_getts(SPM,R);

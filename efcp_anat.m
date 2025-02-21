@@ -249,10 +249,10 @@ function varargout = efcp_anat(what, varargin)
             
             Vol = fullfile(baseDir, sprintf('glm%d',glm), participant_id, sprintf('ses-%.2d',ses), 'mask.nii');
             for r = 1:length(R)
-                img = region_saveasimg(R{r}, Vol, 'name', fullfile(baseDir, regDir, participant_id, sprintf('ses-%.2d',ses), sprintf('%s.%s.%s.nii', atlas, R{r}.hem, R{r}.name)));
+                img = region_saveasimg(R{r}, Vol, 'name', fullfile(baseDir, regDir, participant_id, sprintf('ses-%.2d',ses), sprintf('%s.%s.%s_glm%d.nii', atlas, R{r}.hem, R{r}.name, glm)));
             end
             
-            save(fullfile(output_path, sprintf('%s_%s_region.mat', participant_id, atlas)), 'R');
+            save(fullfile(output_path, sprintf('%s_%s_glm%d_region.mat', participant_id, atlas, glm)), 'R');
     end
 end
     
