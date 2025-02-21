@@ -608,7 +608,7 @@ function varargout = efcp_glm(what, varargin)
 %                     D.regr(i, :, :)=cut(regrC,pre,round(D.ons(i)),post,'padding','nan')';
                 end
                 
-                % Add the event and region information to tje structure. 
+                % Add the event and region information to the structure. 
                 len = size(D.ons,1);                
                 D.SN        = ones(len,1)*sn;
                 D.region    = ones(len,1)*r;
