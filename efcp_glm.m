@@ -554,7 +554,7 @@ function varargout = efcp_glm(what, varargin)
             pre = 6;
             post = 15;
 
-            fprintf('Extracting region time series for participant s%s...\n', participant_id);
+            fprintf('Extracting region time series for participant %s...\n', participant_id);
 
             % load SPM.mat
             cd(fullfile(glmDir, participant_id, ses_id));
