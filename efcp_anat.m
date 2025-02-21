@@ -2,7 +2,7 @@ function varargout = efcp_anat(what, varargin)
     if ismac
         baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
     elseif isunix
-        disp('Running on Linux (Ubuntu or another Unix-based system)');
+        baseDir = '/cifs/diedrichsen/data/Chord_exp/EFC_patternfMRI';
     else
         disp('Running on Windows or another OS');
     end
@@ -13,6 +13,7 @@ function varargout = efcp_anat(what, varargin)
     surfacewbDir = 'surfaceWB'; % fs32k template 
     suitDir = 'suit'; % SUIT 2.0 outputs
     regDir = 'ROI';
+    wbDir = 'surfaceWB';
     SPMhome = spm('dir');
 
     pinfo = dload(fullfile(baseDir,'participants.tsv'));
