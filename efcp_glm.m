@@ -390,6 +390,16 @@ function varargout = efcp_glm(what, varargin)
             spm_rwls_spm(SPM.SPM);
 
             cd(currentDir)
+        
+        case 'GLM:change_SPM.mat_format'
+            % This is kinda crappy but, rsatoolbox has a SPM object which
+            % makes loading and working with SPM.mat easy. But this object
+            % uses scipy.io.loadmat() which does not work with v7.3
+            % structure formats. Therefore, I will change v7.3 with matlab
+            % to v7.2 here.
+            subj_est_dir = fullfile(baseDir, sprintf('glm%d', glm), participant_id, ses_id);                
+            SPM = load(fullfile(subj_est_dir,'SPM.mat'));
+            save(fullfile(subj_est_dir,'SPM_v7.mat'), 'SPM', '-v7.2');
             
         case 'GLM:T_contrasts'
             
