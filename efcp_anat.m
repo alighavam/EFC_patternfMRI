@@ -15,7 +15,7 @@ function varargout = efcp_anat(what, varargin)
     regDir = 'ROI';
     wbDir = 'surfaceWB';
     SPMhome = spm('dir');
-
+    
     pinfo = dload(fullfile(baseDir,'participants.tsv'));
 
     switch(what)
