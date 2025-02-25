@@ -593,7 +593,7 @@ function varargout = efcp_glm(what, varargin)
             R = load(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('%s_%s_glm%d_region.mat', participant_id, atlas, glm))); R=R.R;
             
             % extract time series data
-            [y_raw, y_adj, y_hat, y_res,B] = region_getts(SPM,R);
+            [y_raw, y_adj, y_hat, y_res, B] = region_getts(SPM,R);
             
 %             D = spmj_get_ons_struct(SPM);
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
