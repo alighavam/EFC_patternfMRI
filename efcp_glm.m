@@ -593,6 +593,7 @@ function varargout = efcp_glm(what, varargin)
             efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
+            efcp_anat('ROI:define', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
             
         case 'SURF:vol2surf'
