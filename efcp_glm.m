@@ -530,7 +530,7 @@ function varargout = efcp_glm(what, varargin)
             end
 
             % get the subject id folder name
-            fprintf('Contrasts for participant %s\n', subj_id)
+            fprintf('Contrasts for participant %s\n', participant_id)
             glm_dir = fullfile(baseDir, sprintf('glm%d', glm), participant_id, ses_id);
 
             % load the SPM.mat file
