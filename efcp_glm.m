@@ -12,7 +12,7 @@ function varargout = efcp_glm(what, varargin)
     else
         disp('Running on Windows or another OS');
     end
-
+    
     % if isfolder('/cifs/diedrichsen/data/Chord_exp/ExtFlexChord/efc4/')
     %     baseDir = '/cifs/diedrichsen/data/Chord_exp/ExtFlexChord/efc4/';
     %     % 
@@ -36,7 +36,7 @@ function varargout = efcp_glm(what, varargin)
     glm = [];
     type = 'spmT';
     atlas = 'ROI';
-    hrf_params = [4.5 11 1 1 6 0 32];
+    % hrf_params = [5 11 1 1 6 0 32];
     derivs = [0, 0];
     vararginoptions(varargin,{'sn', 'ses', 'type', 'glm', 'hrf_params', 'atlas','derivs'})
     
@@ -276,6 +276,94 @@ function varargout = efcp_glm(what, varargin)
                     events.TN = [events.TN; D.TN(rows)];
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
+        
+        case 'GLM:make_glm7'
+            % same as 3 but running with another hrf param: [5 11 1 1 6 0 32]
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; D.execMaxTime(rows)];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
+
+        case 'GLM:make_glm8'
+            % same as 3 but running with another hrf param: [5 11 1 1 6 0
+            % 32]. Also the duration is set to be a small pulse in the
+            % middle of the execution phase.
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)+1300];
+                    events.Duration = [events.Duration; D.execMaxTime(rows)-2600];
                     events.repetition = [events.repetition; D.repetition(rows)];
                     events.chordID = [events.chordID; D.repetition(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
@@ -580,14 +668,14 @@ function varargout = efcp_glm(what, varargin)
         case 'GLM:all'
             
             spm_get_defaults('cmdline', true);  % Suppress GUI prompts, no request for overwirte
-         
+            
             % Check for and delete existing SPM.mat file
             % spm_file = fullfile(baseDir, [glmEstDir num2str(glm)], ['subj' num2str(sn)], 'SPM.mat');
             spm_file = fullfile(baseDir, [glmEstDir num2str(glm)], participant_id, ses_id, 'SPM.mat');
             if exist(spm_file, 'file')
                 delete(spm_file);
             end
-
+            
             efcp_glm('GLM:make_event', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('GLM:design', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses, 'derivs', derivs)
             efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
@@ -705,7 +793,7 @@ function varargout = efcp_glm(what, varargin)
             R = load(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('%s_%s_glm%d_region.mat', participant_id, atlas, glm))); R=R.R;
             
             % extract time series data
-            [y_raw, y_adj, y_hat, y_res, B] = region_getts(SPM,R);
+            [y_raw, y_adj, y_hat, y_res, B] = region_getts(SPM,R,'stats','whitemean');
             
 %             D = spmj_get_ons_struct(SPM);
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
@@ -746,5 +834,4 @@ function varargout = efcp_glm(what, varargin)
             
             cd(currentDir)
     end
-
 end
