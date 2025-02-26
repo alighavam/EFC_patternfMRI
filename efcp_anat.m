@@ -1,6 +1,7 @@
 function varargout = efcp_anat(what, varargin)
     if ismac
         baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
+        baseDir = '/Users/alighavampour/Desktop/Projects/EFC_patternfMRI/data';
     elseif isunix
         baseDir = '/cifs/diedrichsen/data/Chord_exp/EFC_patternfMRI';
     else
