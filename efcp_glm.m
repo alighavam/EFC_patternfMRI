@@ -5,7 +5,8 @@ function varargout = efcp_glm(what, varargin)
     % double quotes " because some spm function raise error with double
     % quotes
     if ismac
-        baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
+        % baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
+        baseDir = '/Users/alighavampour/Desktop/Projects/EFC_patternfMRI/data';
     elseif isunix
         baseDir = '/cifs/diedrichsen/data/Chord_exp/EFC_patternfMRI';
     else
@@ -156,7 +157,49 @@ function varargout = efcp_glm(what, varargin)
             events.Duration = events.Duration ./ 1000;
             
             varargout{1} = events;
+        
+        case 'GLM:make_glm4'
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
             
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = D.chordID == chordID & D.repetition == rep;
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; D.execMaxTime(rows)];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset ./ 1000;
+            events.Duration = events.Duration ./ 1000;
+            
+            varargout{1} = events;
+
         case 'GLM:make_event'
             operation  = sprintf('GLM:make_glm%d', glm);
             
@@ -334,24 +377,7 @@ function varargout = efcp_glm(what, varargin)
                 % Method for non sphericity correction
                 J.cvi =  'fast';
             end
-
-            % T.cue000 = strcmp(T.cue, 'cue0');
-            % T.cue025 = strcmp(T.cue, 'cue25');
-            % T.cue050 = strcmp(T.cue, 'cue50');
-            % T.cue075 = strcmp(T.cue, 'cue75');
-            % T.cue100 = strcmp(T.cue, 'cue100');
-            % 
-            % T.index = strcmp(T.stimFinger, 'index');
-            % T.ring = strcmp(T.stimFinger, 'ring');
-            % 
-            % T.plan = strcmp(T.epoch, 'plan');
-            % T.exec = strcmp(T.epoch, 'exec');
-            % 
-            % T.go = strcmp(T.instr, 'go');
-            % T.nogo = strcmp(T.instr, 'nogo');
-            % 
-            % T.rest = strcmp(T.name, 'rest');
-
+            
             % remove empty rows (e.g., when skipping runs)
             J.sess = J.sess(~arrayfun(@(x) all(structfun(@isempty, x)), J.sess));
             
@@ -361,7 +387,7 @@ function varargout = efcp_glm(what, varargin)
             
             dsave(fullfile(J.dir{1},'reginfo.tsv'), T);
             spm_rwls_run_fmri_spec(J);
-
+            
             cd(currentDir)
             
             currentDir = pwd;
