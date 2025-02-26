@@ -759,7 +759,8 @@ function varargout = efcp_glm(what, varargin)
             currentDir = pwd;
             
             glmDir = fullfile(baseDir, [glmEstDir num2str(glm)]);
-            T=[];
+            T = [];
+            time_series = [];
             
             pre = 6;
             post = 15;
@@ -794,7 +795,11 @@ function varargout = efcp_glm(what, varargin)
             
             % extract time series data
             [y_raw, y_adj, y_hat, y_res, B] = region_getts(SPM,R,'stats','whitemean');
-            
+            time_series.y_raw = y_raw;
+            time_series.y_adj = y_adj;
+            time_series.y_hat = y_hat;
+            time_series.y_res = y_res;
+
 %             D = spmj_get_ons_struct(SPM);
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             Dd = dload(fullfile(dat_file.folder, dat_file.name));
@@ -827,7 +832,7 @@ function varargout = efcp_glm(what, varargin)
 %                 D.type      = D.event; 
                 T           = addstruct(T,D);
             end
-            
+            save(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('time_series_glm%d.mat', glm)),'-struct','time_series','-v7');
             save(fullfile(baseDir, regDir, participant_id, ses_id, sprintf('hrf_glm%d.mat', glm)),'T'); 
             varargout{1} = T;
             varargout{2} = y_adj;
