@@ -159,6 +159,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
         
         case 'GLM:make_glm4'
+            % same as 3 but running with another hrf param: [2 6.5 1 1 7]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -184,7 +185,7 @@ function varargout = efcp_glm(what, varargin)
             
             for rep = unique(D.repetition)'
                 for chordID = unique(D.chordID)'
-                    rows = D.chordID == chordID & D.repetition == rep;
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
                     events.BN = [events.BN; D.BN(rows)];
                     events.TN = [events.TN; D.TN(rows)];
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
@@ -195,10 +196,97 @@ function varargout = efcp_glm(what, varargin)
                 end
             end
             events = struct2table(events);
-            events.Onset = events.Onset ./ 1000;
-            events.Duration = events.Duration ./ 1000;
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
             
             varargout{1} = events;
+        
+        case 'GLM:make_glm5'
+            % same as 3 but running with another hrf param: [6 16 1 1 6 0 32]
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; D.execMaxTime(rows)];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
+        
+        case 'GLM:make_glm6'
+            % same as 3 but running with another hrf param: [1 7.5]
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; D.execMaxTime(rows)];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
+
 
         case 'GLM:make_event'
             operation  = sprintf('GLM:make_glm%d', glm);
@@ -349,7 +437,7 @@ function varargout = efcp_glm(what, varargin)
                 % regressors
                 J.bases.hrf.derivs = derivs;
                 J.bases.hrf.params = hrf_params;  % positive and negative peak of HRF - set to [] if running wls (?)
-                defaults.stats.fmri.hrf=J.bases.hrf.params; 
+                % defaults.stats.fmri.hrf=J.bases.hrf.params; 
                 
                 % Specify the order of the Volterra series expansion 
                 % for modeling nonlinear interactions in the BOLD response
@@ -505,9 +593,6 @@ function varargout = efcp_glm(what, varargin)
             efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
-%             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'beta')
-%             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'res')
-%             efcl_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'con')
             efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
             
         case 'SURF:vol2surf'
