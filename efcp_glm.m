@@ -36,7 +36,7 @@ function varargout = efcp_glm(what, varargin)
     glm = [];
     type = 'spmT';
     atlas = 'ROI';
-    % hrf_params = [5 11 1 1 6 0 32];
+    % hrf_params = [4.5 11 1 1 6 0 32];
     derivs = [0, 0];
     vararginoptions(varargin,{'sn', 'ses', 'type', 'glm', 'hrf_params', 'atlas','derivs'})
     
@@ -62,6 +62,7 @@ function varargout = efcp_glm(what, varargin)
     runs = spmj_dotstr2array(subj_row.(sprintf('run_ses%d',ses)){1});
     switch what
         case 'GLM:make_glm1'
+            % run with hrf_params = [4.5 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -72,13 +73,15 @@ function varargout = efcp_glm(what, varargin)
             events.Onset = [];
             events.Duration = [];
             events.eventtype = [];
+            events.chordID = [];
             
             for chordID = chords'
                 rows = D.chordID == chordID;
                 events.BN = [events.BN; D.BN(rows)];
                 events.TN = [events.TN; D.TN(rows)];
                 events.Onset = [events.Onset; D.startTimeReal(rows)];
-                events.Duration = [events.Duration; D.execMaxTime(rows)];
+                events.Duration = [events.Duration; repmat(100, [sum(rows), 1])];
+                events.chordID = [events.chordID; D.chordID(rows)];
                 events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d', chordID)}, [sum(rows), 1])];
             end
             
@@ -89,29 +92,45 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
 
         case 'GLM:make_glm2'
+            % run with hrf param: [4.5 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
-
-            chords = unique(D.chordID);
             
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
             events.BN = [];
             events.TN = [];
             events.Onset = [];
             events.Duration = [];
-            events.eventtype = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
             
-            for chordID = chords'
-                rows = D.chordID == chordID & D.trialPoint == 1;
-                events.BN = [events.BN; D.BN(rows)];
-                events.TN = [events.TN; D.TN(rows)];
-                events.Onset = [events.Onset; D.startTimeReal(rows)];
-                events.Duration = [events.Duration; D.execMaxTime(rows)];
-                events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d', chordID)}, [sum(rows), 1])];
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; repmat(100, [sum(rows),1])];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
             end
-            
             events = struct2table(events);
-            events.Onset = events.Onset ./ 1000;
-            events.Duration = events.Duration ./ 1000;
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
             
             varargout{1} = events;
             
@@ -147,7 +166,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -191,7 +210,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -234,7 +253,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -277,7 +296,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -320,7 +339,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
                     events.Duration = [events.Duration; D.execMaxTime(rows)];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -365,7 +384,7 @@ function varargout = efcp_glm(what, varargin)
                     events.Onset = [events.Onset; D.startTimeReal(rows)+1300];
                     events.Duration = [events.Duration; D.execMaxTime(rows)-2600];
                     events.repetition = [events.repetition; D.repetition(rows)];
-                    events.chordID = [events.chordID; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
                 end
             end
@@ -374,7 +393,49 @@ function varargout = efcp_glm(what, varargin)
             events.Duration = events.Duration / 1000;
             
             varargout{1} = events;
+        
+        case 'GLM:make_glm9'
+            % same as 3 but running with another hrf param: [5 11 1 1 6 0 32]
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
 
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; repmat(100, [sum(rows),1])];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
 
         case 'GLM:make_event'
             operation  = sprintf('GLM:make_glm%d', glm);
@@ -683,6 +744,7 @@ function varargout = efcp_glm(what, varargin)
             efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
             efcp_anat('ROI:define', 'sn', sn, 'glm', glm, 'ses', ses)
             efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
+            efcp_glm('GLM:change_SPM.mat_format', 'sn', 1, 'glm', glm, 'ses', ses)
             
         case 'SURF:vol2surf'
             currentDir = pwd;
