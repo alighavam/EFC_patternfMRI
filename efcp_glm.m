@@ -176,6 +176,49 @@ function varargout = efcp_glm(what, varargin)
             events.Duration = events.Duration / 1000;
             
             varargout{1} = events;
+
+        case 'GLM:make_glm4'
+            % run with hrf param: [3 11 1 1 6 0 32]
+            dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
+            D = dload(fullfile(dat_file.folder, dat_file.name));
+            
+            D.repetition = ones(length(D.TN), 1); % Initialize repetition column with 1
+
+            for i = 1:length(D.TN)
+                if i == 1
+                    D.repetition(i) = 1;
+                else
+                    if D.chordID(i) == D.chordID(i-1)
+                        D.repetition(i) = 2;
+                    end
+                end
+            end
+    
+            events.BN = [];
+            events.TN = [];
+            events.Onset = [];
+            events.Duration = [];
+            events.eventtype = {};
+            events.chordID = [];
+            events.repetition = [];
+            
+            for rep = unique(D.repetition)'
+                for chordID = unique(D.chordID)'
+                    rows = (D.chordID == chordID) & (D.repetition == rep);
+                    events.BN = [events.BN; D.BN(rows)];
+                    events.TN = [events.TN; D.TN(rows)];
+                    events.Onset = [events.Onset; D.startTimeReal(rows)];
+                    events.Duration = [events.Duration; repmat(10, [sum(rows),1])];
+                    events.repetition = [events.repetition; D.repetition(rows)];
+                    events.chordID = [events.chordID; D.chordID(rows)];
+                    events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
+                end
+            end
+            events = struct2table(events);
+            events.Onset = events.Onset / 1000;
+            events.Duration = events.Duration / 1000;
+            
+            varargout{1} = events;
             
         case 'GLM:make_glm3dep'
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
