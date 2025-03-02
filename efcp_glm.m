@@ -92,7 +92,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
 
         case 'GLM:make_glm2'
-            % run with hrf param: [4.5 11 1 1 6 0 32]
+            % run with hrf param: [5 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -135,7 +135,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
         
         case 'GLM:make_glm3'
-            % run with hrf param: [3.5 11 1 1 6 0 32]
+            % run with hrf param: [4 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -178,7 +178,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
 
         case 'GLM:make_glm4'
-            % run with hrf param: [3 11 1 1 6 0 32]
+            % run with hrf param: [4 10 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -238,11 +238,11 @@ function varargout = efcp_glm(what, varargin)
             end
             
             currentDir = pwd;
-
+            
             if isempty(sn)
                 error('GLM:design -> ''sn'' must be passed to this function.')
             end
-
+            
             if isempty(glm)
                 error('GLM:design -> ''glm'' must be passed to this function.')
             end
@@ -251,22 +251,22 @@ function varargout = efcp_glm(what, varargin)
             % D = dload(fullfile(baseDir,behavDir,subj_id, sprintf('smp2_%d.dat', sn)));
             events_file = sprintf('glm%d_events.tsv', glm);
             
-            Dd = dload(fullfile(baseDir,behavDir, participant_id, ses_id, events_file));
+            Dd = dload(fullfile(baseDir, behavDir, participant_id, ses_id, events_file));
             
             regressors = unique(Dd.eventtype);
             nRegr = length(regressors);
-
+            
             % init J
             J = [];
             T = [];
             J.dir = {fullfile(baseDir, sprintf('glm%d', glm), participant_id, ses_id)};
             J.timing.units = 'secs';
             J.timing.RT = 1;
-
+            
             % number of temporal bins in which the TR is divided,
             % defines the discrtization of the HRF inside each TR
             J.timing.fmri_t = 16;
-
+            
             % slice number that corresponds to that acquired halfway in
             % each TR
             J.timing.fmri_t0 = 1;
@@ -519,16 +519,17 @@ function varargout = efcp_glm(what, varargin)
             if exist(spm_file, 'file')
                 delete(spm_file);
             end
-            
-            efcp_glm('GLM:make_event', 'sn', sn, 'glm', glm, 'ses', ses)
-            efcp_glm('GLM:design', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses, 'derivs', derivs)
-            efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
-            efcp_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'ses', ses)
-            efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
-            efcp_anat('ROI:define', 'sn', sn, 'glm', glm, 'ses', ses)
-            efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
-            efcp_glm('GLM:change_SPM.mat_format', 'sn', 1, 'glm', glm, 'ses', ses)
-            
+
+            for ses = 1:2
+                efcp_glm('GLM:make_event', 'sn', sn, 'glm', glm, 'ses', ses)
+                efcp_glm('GLM:design', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses, 'derivs', derivs)
+                efcp_glm('GLM:estimate', 'sn', sn, 'glm', glm, 'ses', ses)
+                efcp_glm('GLM:T_contrasts', 'sn', sn, 'glm', glm, 'ses', ses)
+                efcp_glm('SURF:vol2surf', 'sn', sn, 'glm', glm, 'type', 'spmT', 'ses', ses)
+                efcp_anat('ROI:define', 'sn', sn, 'glm', glm, 'ses', ses)
+                efcp_glm('HRF:ROI_hrf_get', 'sn', sn, 'glm', glm, 'hrf_params', hrf_params, 'ses', ses)
+                efcp_glm('GLM:change_SPM.mat_format', 'sn', 1, 'glm', glm, 'ses', ses)
+            end
         case 'SURF:vol2surf'
             currentDir = pwd;
             
