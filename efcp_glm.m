@@ -80,7 +80,7 @@ function varargout = efcp_glm(what, varargin)
                 events.BN = [events.BN; D.BN(rows)];
                 events.TN = [events.TN; D.TN(rows)];
                 events.Onset = [events.Onset; D.startTimeReal(rows)];
-                events.Duration = [events.Duration; repmat(100, [sum(rows), 1])];
+                events.Duration = [events.Duration; repmat(10, [sum(rows), 1])];
                 events.chordID = [events.chordID; D.chordID(rows)];
                 events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d', chordID)}, [sum(rows), 1])];
             end
@@ -122,7 +122,7 @@ function varargout = efcp_glm(what, varargin)
                     events.BN = [events.BN; D.BN(rows)];
                     events.TN = [events.TN; D.TN(rows)];
                     events.Onset = [events.Onset; D.startTimeReal(rows)];
-                    events.Duration = [events.Duration; repmat(100, [sum(rows),1])];
+                    events.Duration = [events.Duration; repmat(10, [sum(rows),1])];
                     events.repetition = [events.repetition; D.repetition(rows)];
                     events.chordID = [events.chordID; D.chordID(rows)];
                     events.eventtype = [events.eventtype; repmat({sprintf('chordID:%d,repetition:%d', chordID, rep)}, [sum(rows), 1])];
