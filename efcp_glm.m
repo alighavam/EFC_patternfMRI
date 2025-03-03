@@ -412,7 +412,7 @@ function varargout = efcp_glm(what, varargin)
                 % regressors
                 J.bases.hrf.derivs = derivs;
                 J.bases.hrf.params = hrf_params;  % positive and negative peak of HRF - set to [] if running wls (?)
-                % defaults.stats.fmri.hrf=J.bases.hrf.params; 
+                defaults.stats.fmri.hrf=J.bases.hrf.params; 
                 
                 % Specify the order of the Volterra series expansion 
                 % for modeling nonlinear interactions in the BOLD response
