@@ -276,7 +276,7 @@ function varargout = efcp_glm(what, varargin)
         case 'GLM:design'
             % Import globals from spm_defaults 
             global defaults; 
-            if (isempty(defaults)) 
+            if (isempty(defaults))
                 spm_defaults;
             end
             
