@@ -135,7 +135,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
         
         case 'GLM:make_glm3'
-            % run with hrf param: [4 11 1 1 6 0 32]
+            % run with hrf param: [5 11 1 1 1.5 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -178,7 +178,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
 
         case 'GLM:make_glm4'
-            % run with hrf param: [4 10 1 1 6 0 32]
+            % run with hrf param: [4.5 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
@@ -221,7 +221,7 @@ function varargout = efcp_glm(what, varargin)
             varargout{1} = events;
 
         case 'GLM:make_glm5'
-            % run with hrf param: [3 10 1 1 6 0 32]
+            % run with hrf param: [4 11 1 1 6 0 32]
             dat_file = dir(fullfile(baseDir, behavDir, participant_id, ses_id, 'efc4_*.dat'));
             D = dload(fullfile(dat_file.folder, dat_file.name));
             
