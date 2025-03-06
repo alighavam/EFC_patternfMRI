@@ -85,7 +85,7 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
         Estimate the within subject and noise variance for each subject.
     
         Args:
-            data: 2D numpy array of shape (N-regressors by P-voxels)
+            data: 2D numpy array of shape (N-regressors by P-voxels) nan must be removed.
             partition_vec: 1D numpy array of shape (N-regressors) with partition index
             cond_vec: 1D numpy array of shape (N-regressors) with condition index
             subj_vec: 1D numpy array of shape (P-voxels) with subject index
@@ -120,12 +120,12 @@ def within_subj_var(data, partition_vec, cond_vec, subj_vec, subtract_mean=True)
             # Reshape Y to separate each partition
             Y_reshaped = Y.reshape(partition.shape[0], cond.shape[0], P)
 
-            # mean of voxels across conditions for each partition:
+            # mean of voxels over conditions for each partition:
             partition_means = Y_reshaped.mean(axis=1, keepdims=True)
 
             # subtract the partition means from the original reshaped Y and rehsape back to original:
             Y = (Y_reshaped - partition_means).reshape(N, P)
-        
+
             cov_Y = Y @ Y.T / Y.shape[1]
 
             # avg of the main diagonal:
