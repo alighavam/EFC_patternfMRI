@@ -4,8 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 
-
-def makeTGT_emg(subNum):
+def makeTGT_emg_deprecated(subNum):
     '''
     make target files for EMG experiment
     '''
@@ -66,7 +65,7 @@ def makeTGT_emg(subNum):
         df.to_csv(os.path.join('target', fname), sep='\t', index=False)
         print(f'{fname} saved!')
 
-def makeTGT_training(subNum):
+def makeTGT_training_deprecated(subNum):
     ''' 
     make target files for training experiment
     '''
@@ -113,8 +112,198 @@ def makeTGT_training(subNum):
             df.to_csv(os.path.join('target', fname), sep='\t', index=False)
             print(f'{fname} saved!')
 
-def makeTGT_fMRI(subNum):
+def makeTGT_training_day1(subNum):
     ''' 
+    EFCP DAY1: 10 blocks of 50 trials + 1 block of 20 trials = 520 trials. exec_max_time = 5s 
+    but trial is complete if held for 1000ms, feedback_time+iti=1s jittered. Chords repeat for 5 consecutive trials.
+    '''
+
+    # chord list:
+    set = np.array([91999,99199,99919,92999,99299,99929,
+                     91199,91919,99119,91299,91929,92199,92919,99129,99219,92299,92929,99229,
+                     91119,91129,91219,92119,91229,92129,92219,92229])
+
+    nRep = 5 # number of repetition of each chord
+    nVisits = 4 # number of visits of each chord
+
+    # params:
+    planTime = 0  # time for planning, if 0, go-cue is presented immediately
+    execMaxTime = 5000  # maximum allowed time for execution
+    holdTime = 1000  # hold time of the chord
+    feedbackTime = 500  # time to present feedback
+    iti_range = [500, 1000]
+    
+    trials = np.repeat(set, nVisits)
+    np.random.shuffle(trials)
+    trials = np.repeat(trials, nRep)
+
+    runs = np.split(trials[:500], 10)
+    runs.append(trials[500:])
+    
+    # make tgt files:
+    # target file columns:
+    column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'holdTime', 'feedbackTime', 'iti']
+    for r, run in enumerate(runs):
+        # building the dataframe:
+        df = pd.DataFrame(columns=column_names)
+        df['chordID'] = run
+        df['subNum'] = np.full_like(run, subNum)
+        df['planTime'] = np.full_like(run, planTime)
+        df['execMaxTime'] = np.full_like(run, execMaxTime)
+        df['holdTime'] = np.full_like(run, holdTime)
+        df['feedbackTime'] = np.full_like(run, feedbackTime)
+        df['iti'] = np.random.randint(iti_range[0], iti_range[1], len(run))
+        
+        # saving the tgt file:
+        fname = f'efcp_s{subNum}_day1_run{r+1:02d}.tgt'
+        df.to_csv(os.path.join('target', fname), sep='\t', index=False)
+        print(f'{fname} saved!')
+
+def makeTGT_training_day2(subNum):
+    ''' 
+    EFCP DAY1: 10 blocks of 50 trials + 1 block of 20 trials = 520 trials. exec_max_time = 3s 
+    but trial is complete if held for 1000ms, feedback_time+iti=1s jittered. Chords repeat for 2 consecutive trials.
+    '''
+
+    # chord list:
+    set = np.array([91999,99199,99919,92999,99299,99929,
+                     91199,91919,99119,91299,91929,92199,92919,99129,99219,92299,92929,99229,
+                     91119,91129,91219,92119,91229,92129,92219,92229])
+
+    nRep = 2 # number of repetition of each chord
+    nVisits = 10 # number of visits of each chord
+
+    # params:
+    planTime = 0  # time for planning, if 0, go-cue is presented immediately
+    execMaxTime = 3000  # maximum allowed time for execution
+    holdTime = 1000  # hold time of the chord
+    feedbackTime = 500  # time to present feedback
+    iti_range = [500, 1000]
+    
+    trials = np.repeat(set, nVisits)
+    np.random.shuffle(trials)
+    trials = np.repeat(trials, nRep)
+
+    runs = np.split(trials[:500], 10)
+    runs.append(trials[500:])
+    
+    # make tgt files:
+    # target file columns:
+    column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'holdTime', 'feedbackTime', 'iti']
+    for r, run in enumerate(runs):
+        # building the dataframe:
+        df = pd.DataFrame(columns=column_names)
+        df['chordID'] = run
+        df['subNum'] = np.full_like(run, subNum)
+        df['planTime'] = np.full_like(run, planTime)
+        df['execMaxTime'] = np.full_like(run, execMaxTime)
+        df['holdTime'] = np.full_like(run, holdTime)
+        df['feedbackTime'] = np.full_like(run, feedbackTime)
+        df['iti'] = np.random.randint(iti_range[0], iti_range[1], len(run))
+
+        # saving the tgt file:
+        fname = f'efcp_s{subNum}_day2_run{r+1:02d}.tgt'
+        df.to_csv(os.path.join('target', fname), sep='\t', index=False)
+        print(f'{fname} saved!')
+
+def makeTGT_emg_day3(subNum):
+    ''' 
+    EFCP DAY 3: 10 blocks of 50 trials + 1 block of 20 trials = 520 trials. exec_max_time = 3s fix, 
+    feedback_time+iti=1s jittered. Chords repeat in batches of 2 trials. 
+    Estimated Time: 25-mins electrode placement + 60-mins chord production + 30-mins natural = 120mins
+    '''
+
+    # chord list:
+    set = np.array([91999,99199,99919,92999,99299,99929,
+                     91199,91919,99119,91299,91929,92199,92919,99129,99219,92299,92929,99229,
+                     91119,91129,91219,92119,91229,92129,92219,92229])
+
+    nRep = 2 # number of repetition of each chord
+    nVisits = 10 # number of visits of each chord
+
+    # params:
+    planTime = 0  # time for planning, if 0, go-cue is presented immediately
+    execMaxTime = 3000  # maximum allowed time for execution
+    holdTime = 1000  # hold time of the chord
+    feedbackTime = 500  # time to present feedback
+    iti_range = [500, 1000]
+    
+    trials = np.repeat(set, nVisits)
+    np.random.shuffle(trials)
+    trials = np.repeat(trials, nRep)
+
+    runs = np.split(trials[:500], 10)
+    runs.append(trials[500:])
+    
+    # make tgt files:
+    # target file columns:
+    column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'holdTime', 'feedbackTime', 'iti']
+    for r, run in enumerate(runs):
+        # building the dataframe:
+        df = pd.DataFrame(columns=column_names)
+        df['chordID'] = run
+        df['subNum'] = np.full_like(run, subNum)
+        df['planTime'] = np.full_like(run, planTime)
+        df['execMaxTime'] = np.full_like(run, execMaxTime)
+        df['holdTime'] = np.full_like(run, holdTime)
+        df['feedbackTime'] = np.full_like(run, feedbackTime)
+        df['iti'] = np.random.randint(iti_range[0], iti_range[1], len(run))
+
+        # saving the tgt file:
+        fname = f'efcp_s{subNum}_day3_run{r+1:02d}.tgt'
+        df.to_csv(os.path.join('target', fname), sep='\t', index=False)
+        print(f'{fname} saved!')
+
+def makeTGT_emg_day4(subNum):
+    ''' 
+    EFCP DAY 4: 10 blocks of 50 trials + 1 block of 20 trials = 520 trials. exec_max_time = 3s fix, 
+    feedback_time+iti=1s jittered. Chords repeat in batches of 2 trials. 
+    Estimated Time: 25-mins electrode placement + 60-mins chord production + 30-mins natural = 120mins
+    '''
+
+    # chord list:
+    set = np.array([91999,99199,99919,92999,99299,99929,
+                     91199,91919,99119,91299,91929,92199,92919,99129,99219,92299,92929,99229,
+                     91119,91129,91219,92119,91229,92129,92219,92229])
+
+    nRep = 2 # number of repetition of each chord
+    nVisits = 10 # number of visits of each chord
+
+    # params:
+    planTime = 0  # time for planning, if 0, go-cue is presented immediately
+    execMaxTime = 3000  # maximum allowed time for execution
+    holdTime = 1000  # hold time of the chord
+    feedbackTime = 500  # time to present feedback
+    iti_range = [500, 1000]
+    
+    trials = np.repeat(set, nVisits)
+    np.random.shuffle(trials)
+    trials = np.repeat(trials, nRep)
+
+    runs = np.split(trials[:500], 10)
+    runs.append(trials[500:])
+    
+    # make tgt files:
+    # target file columns:
+    column_names = ['subNum', 'chordID', 'planTime', 'execMaxTime', 'holdTime', 'feedbackTime', 'iti']
+    for r, run in enumerate(runs):
+        # building the dataframe:
+        df = pd.DataFrame(columns=column_names)
+        df['chordID'] = run
+        df['subNum'] = np.full_like(run, subNum)
+        df['planTime'] = np.full_like(run, planTime)
+        df['execMaxTime'] = np.full_like(run, execMaxTime)
+        df['holdTime'] = np.full_like(run, holdTime)
+        df['feedbackTime'] = np.full_like(run, feedbackTime)
+        df['iti'] = np.random.randint(iti_range[0], iti_range[1], len(run))
+
+        # saving the tgt file:
+        fname = f'efcp_s{subNum}_day4_run{r+1:02d}.tgt'
+        df.to_csv(os.path.join('target', fname), sep='\t', index=False)
+        print(f'{fname} saved!')
+
+def makeTGT_fMRI(subNum):
+    '''
         make target files for fMRI experiment
     '''
     # chord list:
@@ -137,7 +326,7 @@ def makeTGT_fMRI(subNum):
     # scanner related timings:
     start_acq = 3000    # time to start the acquisition. for signal to reach equilibrium
     buff = 1000         # buffer time between trials.
-    rest = 12000        # rest interval durations.
+    rest = 15000        # rest interval durations.
     end_acq = 10500     # how long to wait after the last trial before stopping the acquisition. Because BOLD is slow.
 
     for i in range(nDays):
@@ -177,19 +366,23 @@ def makeTGT_fMRI(subNum):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--subNum', default='100',
+    parser.add_argument('--subNum', default='999',
                         help='Participant ID (e.g., subj100, subj101, ...)')
-    parser.add_argument('--experiment', default='train',
+    parser.add_argument('--experiment', default='day1',
                         help='Type of experiment (e.g., train, emg, fMRI, etc.)')
     
     args = parser.parse_args()
     subNum = args.subNum
     experiment = args.experiment
     
-    if experiment == 'emg':
-        makeTGT_emg(subNum)
+    if experiment == 'fMRI_pilot1':
+        makeTGT_training_day1(subNum)
+        makeTGT_training_day2(subNum)
+        makeTGT_emg_day3(subNum)
+        makeTGT_emg_day4(subNum)
+        makeTGT_fMRI(subNum)
     elif experiment == 'train':
-        makeTGT_training(subNum)  
+        makeTGT_training_day1(subNum)
     elif experiment == 'fMRI':
         makeTGT_fMRI(subNum)
     else:
