@@ -368,7 +368,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--subNum', default='999',
                         help='Participant ID (e.g., subj100, subj101, ...)')
-    parser.add_argument('--experiment', default='day1',
+    parser.add_argument('--experiment', default='fMRI_pilot1',
                         help='Type of experiment (e.g., train, emg, fMRI, etc.)')
     
     args = parser.parse_args()
