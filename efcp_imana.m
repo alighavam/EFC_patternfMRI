@@ -381,7 +381,7 @@ function varargout = efcp_imana(what, varargin)
                 spmj_makesamealign_nifti(char(P),char(Q));
             end
         
-        case 'FUNC:make_maskImage'       
+        case 'FUNC:make_maskImage'
             % Make mask images (noskull and gray_only) for 1st level glm
             for i = 1:length(ses)
                 epi_files = dir(fullfile(baseDir, imagingDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
@@ -428,6 +428,227 @@ function varargout = efcp_imana(what, varargin)
                 movefile(source,dest);
             end
     
+        case '==============CASES FOR SINGLE SESSION PREP=============='
+        case 'FUNC:make_one_ses'
+            cnt = 1;
+            for i = 1:length(ses)
+                epi_path = fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}));
+                epi_files = dir(fullfile(epi_path, [participant_id '_run_*.nii']));
+
+                fmap_path = fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}));
+                fmap_files = dir(fullfile(fmap_path, ['vdm5_sc*_phase_run_*.nii']));
+
+                % copy to main subject folder:
+                for run = 1:length(epi_files)
+                    output_epi_file = fullfile(baseDir, imagingRawDir, participant_id, sprintf('%s_run_%02d.nii',participant_id,cnt));
+                    copyfile(fullfile(epi_files(run).folder,epi_files(run).name), output_epi_file);
+                    fprintf('copied %s to %s\n',epi_files(run).name, sprintf('%s_run_%02d.nii',participant_id,cnt))
+
+                    output_fmap_file = fullfile(baseDir, fmapDir, participant_id, sprintf('vdm5_sc%s_phase_run_%02d.nii',participant_id,cnt));
+                    copyfile(fullfile(fmap_files(run).folder,fmap_files(run).name), output_fmap_file);
+                    fprintf('copied %s to %s\n',fmap_files(run).name, sprintf('vdm5_sc%s_phase_run_%02d.nii',participant_id,cnt))
+
+                    cnt = cnt+1;
+                end
+            end
+        
+        case 'FUNC:realign_unwarp_one_ses'
+            % for i = 1:length(ses)
+            %     % Do spm_realign_unwarp
+            %     epi_runs = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('ses-%s',ses{i}), [participant_id '_run_*.nii']));
+            %     fmap_runs = dir(fullfile(baseDir, fmapDir, participant_id, sprintf('ses-%s',ses{i}), ['vdm5_sc' participant_id '_phase_run_*.nii']));
+            % 
+            %     epi_list = {};
+            %     fmap_list = {};
+            %     for run = 1:length(epi_runs)
+            %         epi_list{end+1} = fullfile(epi_runs(run).folder, epi_runs(run).name);
+            %         fmap_list{end+1} = fullfile(fmap_runs(run).folder, fmap_runs(run).name);
+            %     end
+            % 
+            %     spmj_realign_unwarp(epi_list, fmap_list, 'rtm', rtm);
+            % end
+            % Do spm_realign_unwarp
+            epi_runs = dir(fullfile(baseDir, imagingRawDir, participant_id, [participant_id '_run_*.nii']));
+            fmap_runs = dir(fullfile(baseDir, fmapDir, participant_id, ['vdm5_sc' participant_id '_phase_run_*.nii']));
+            
+            epi_list = {};
+            fmap_list = {};
+            for run = 1:length(epi_runs)
+                epi_list{end+1} = fullfile(epi_runs(run).folder, epi_runs(run).name);
+                fmap_list{end+1} = fullfile(fmap_runs(run).folder, fmap_runs(run).name);
+            end
+
+            spmj_realign_unwarp(epi_list, fmap_list, 'rtm', rtm);
+        
+        case 'FUNC:move_realigned_images_ss'
+            % Move images created by realign(+unwarp) into imaging_data
+            realigned_epi_files = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('%s%s_run_*.nii', prefix, participant_id)));
+            rp_files = dir(fullfile(baseDir, imagingRawDir, participant_id, sprintf('rp_%s_run_*.txt', participant_id)));
+            mean_epi_files = dir(fullfile(baseDir, imagingRawDir, participant_id, '*mean*.nii'));
+            
+            dest_dir = fullfile(baseDir, imagingDir, participant_id);
+            if ~exist(dest_dir,'dir')
+                mkdir(dest_dir)
+            end
+            
+            % loop on runs of the session:
+            for run = 1:length(realigned_epi_files)
+                % realigned (and unwarped) images names:
+                source = fullfile(realigned_epi_files(run).folder, realigned_epi_files(run).name);
+                
+                out_name = realigned_epi_files(run).name(length(prefix) + 1:end); % remove the prefix from realigned (and unwarped) file names
+                dest = fullfile(dest_dir, out_name);
+                % move to destination:
+                fprintf('moving and renaming imaging_data_raw/%s --> imaging_data/%s\n',realigned_epi_files(run).name,out_name)
+                [status,msg] = copyfile(source,dest);
+                if ~status  
+                    error('FUNC:move_realigned_images -> %s',msg)
+                end
+                
+                % realign parameters names:
+                source = fullfile(rp_files(run).folder, rp_files(run).name);
+                dest = fullfile(dest_dir, rp_files(run).name);
+                % move to destination:
+                [status,msg] = copyfile(source,dest);
+                if ~status  
+                    error('FUNC:move_realigned_images -> %s',msg)
+                end
+            end
+            
+            % move the mean epi file:
+            source = fullfile(mean_epi_files(1).folder, mean_epi_files(1).name);
+            dest = fullfile(dest_dir, mean_epi_files(1).name);
+            % move to destination:
+            [status,msg] = copyfile(source, dest);
+            if ~status  
+                error('BIDS:move_realigned_images -> %s',msg)
+            end
+        
+        case 'FUNC:meanimage_bias_correction_ss'
+            % EPI images often contain smooth artifacts caused by MRI
+            % physics which make the intensity of signal from the same
+            % tissue (e.g., grey matter, white matter) non-uniform. This
+            % step perform bias correction and creates an image where the
+            % signal from each tissue type is more uniform. This image is
+            % then co-registered to the anatomical image. Bias correction
+            % help make co-registration more accurate. If the realignment
+            % was done with respect to the first volume of each run of each
+            % session, the mean image will be calculated on the first run
+            % of each session and will be called 'meanu*_run_01.nii'
+            % ('mean' indicates the image is average of the volumes and 'u'
+            % indicates it's unwarped). Therefore, we do the bias
+            % correction on this file. But if you do the realignment to the
+            % mean epi of every run, the generated mean file will be named
+            % 'umeanepi_*' and we do the bias correction on this file. In
+            % addition, this step generates five tissue probability maps
+            % (c1-5) for grey matter, white matter, csf, bone and soft
+            % tissue.
+            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, 'mean*.nii'));
+            P{1} = fullfile(mean_epi.folder, mean_epi.name);
+            spmj_bias_correct(P);
+        case 'FUNC:coreg_ss'
+            % coregister rbumean image to anatomical image for each session
+            
+            % (1) Manually seed the functional/anatomical registration
+            % - Open fsleyes
+            % - Add anatomical image and b*mean*.nii (bias corrected mean) image to overlay
+            % - click on the bias corrected mean image in the 'Overlay
+            %   list' in the bottom left of the fsleyes window.
+            %   list to highlight it.
+            % - Open tools -> Nudge
+            % - Manually adjust b*mean*.nii image to the anatomical by 
+            %   changing the 6 paramters (tranlation xyz and rotation xyz) 
+            %   and Do not change the scales! 
+            % - When done, click apply and close the tool tab. Then to save
+            %   the changes, click on the save icon next to the mean image 
+            %   name in the 'Overlay list' and save the new image by adding
+            %   'r' in the beginning of the name: rb*mean*.nii. If you don't
+            %   set the format to be .nii, fsleyes automatically saves it as
+            %   a .nii.gz so either set it or gunzip afterwards to make it
+            %   compatible with SPM.
+            
+            % (2) Run automated co-registration to register bias-corrected meanimage to anatomical image
+            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, ['bmean' prefix, participant_id '_run_*.nii']));
+            
+            J.source = {fullfile(mean_epi.folder, mean_epi.name)}; 
+            J.ref = {fullfile(baseDir, anatomicalDir, participant_id, [participant_id, '_T1w','.nii'])};
+            J.other = {''};
+            J.eoptions.cost_fun = 'nmi';
+            J.eoptions.sep = [4 2];
+            J.eoptions.tol = [0.02 0.02 0.02 0.001 0.001 0.001 0.01 0.01 0.01 0.001 0.001 0.001];
+            J.eoptions.fwhm = [7 7];
+            matlabbatch{1}.spm.spatial.coreg.estimate=J;
+            spm_jobman('run',matlabbatch);
+
+        case 'FUNC:make_samealign_ss'
+            % align to registered bias corrected mean image of each session
+            % (rb*mean*.nii). Alignment happens only by changing the
+            % transform matrix in the header files of the functional 4D
+            % .nii files to the transform matrix that aligns them to
+            % anatomical. The reason that it works is: 1) in the
+            % realignment (+unwarping) process, we have registered every
+            % single volume of every single run to the first volume of the
+            % first run of the session (rtm=0). 2) In the same step, for each
+            % session, a mean functional image (meanepi*.nii or meanu*.nii
+            % based on the rtm option) was generated. This mean image is
+            % alread in the space of all the functional volumes. Later we
+            % coregister this image to the anatomical space. Therefore, if
+            % we change the transformation matrices of all the functional
+            % volumes to the transform matrix of the coregistered image,
+            
+            epi_files = dir(fullfile(baseDir, imagingDir, participant_id, [participant_id '_run_*.nii']));
+            epi_list = {}; % Initialize as an empty cell array
+            for run = 1:length(epi_files)
+                epi_list{end+1} = fullfile(epi_files(run).folder, epi_files(run).name);
+            end
+            
+            % select the reference image:
+            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, ['bmean' prefix participant_id '_run_*.nii']));
+            P{1} = fullfile(mean_epi.folder, mean_epi.name);
+            
+            % select images to be realigned:
+            Q = {};
+            for r = 1:length(epi_list)
+                for j = 1:pinfo.numTR
+                    Q{end+1} = fullfile(sprintf('%s,%d', epi_list{r}, j));
+                end
+            end
+            
+            spmj_makesamealign_nifti(char(P),char(Q));
+        
+        case 'FUNC:make_maskImage_one_ses'
+            % Make mask images (noskull and gray_only) for 1st level glm
+            % bias corrected mean epi image:
+            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, ['bmean' prefix participant_id '_run_01.nii']));
+            nam{1} = fullfile(mean_epi.folder, mean_epi.name);
+            
+            nam{2} = fullfile(baseDir, anatomicalDir, participant_id, ['c1', participant_id, '_T1w','.nii']);
+            nam{3} = fullfile(baseDir, anatomicalDir, participant_id, ['c2', participant_id, '_T1w','.nii']);
+            nam{4} = fullfile(baseDir, anatomicalDir, participant_id, ['c3', participant_id, '_T1w','.nii']);
+            spm_imcalc(nam, fullfile(baseDir, imagingDir, participant_id, 'rmask_noskull.nii'), 'i1>1 & (i2+i3+i4)>0.2')
+            
+            source = fullfile(baseDir, imagingDir, participant_id, 'rmask_noskull.nii');
+            dest = fullfile(baseDir, anatomicalDir, participant_id, 'rmask_noskull.nii');
+            movefile(source, dest);
+            
+            % gray matter mask for covariance estimation
+            % ------------------------------------------
+            nam={};
+            % nam{1}  = fullfile(imagingDir,subj_id{sn}, 'sess1', ['rb' prefix 'meanepi_' subj_id{sn} '.nii']);
+
+            % IS THIS CHANGE CORRECT??
+            % nam{1}  = fullfile(baseDir,imagingDir,char(pinfo.subj_id(pinfo.sn==sn)),sprintf('sess%d',sess), ['rb' prefix 'meanepi_' char(pinfo.subj_id(pinfo.sn==sn)) '.nii']);
+            % bias corrected mean epi image:
+            mean_epi = dir(fullfile(baseDir, imagingDir, participant_id, ['bmean' prefix participant_id '_run_*.nii']));
+            nam{1} = fullfile(mean_epi(1).folder, mean_epi(1).name);
+
+            nam{2} = fullfile(baseDir, anatomicalDir, participant_id, ['c1', participant_id, '_T1w','.nii']);
+            spm_imcalc(nam, fullfile(baseDir, imagingDir, participant_id, 'rmask_gray.nii'), 'i1>1 & i2>0.4')
+            
+            source = fullfile(baseDir, imagingDir, participant_id, 'rmask_gray.nii');
+            dest = fullfile(baseDir, anatomicalDir, participant_id, 'rmask_gray.nii');
+            movefile(source,dest);
+
     end 
 
 end
