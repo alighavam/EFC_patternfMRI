@@ -4,7 +4,7 @@ function varargout = efcp_imana(what, varargin)
     % double quotes " because some spm function raise error with double
     % quotes
     if ismac
-        baseDir = '/Volumes/Diedrichsen_data$/data/Chord_exp/EFC_patternfMRI';
+        baseDir = '/Users/alighavampour/Desktop/Projects/EFC_patternfMRI/data/efcp_fMRI';
     elseif isunix
         baseDir = '/cifs/diedrichsen/data/Chord_exp/EFC_patternfMRI';
     else
