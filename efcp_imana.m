@@ -649,6 +649,5 @@ function varargout = efcp_imana(what, varargin)
             dest = fullfile(baseDir, anatomicalDir, participant_id, 'rmask_gray.nii');
             movefile(source,dest);
 
-    end 
-
+    end
 end
